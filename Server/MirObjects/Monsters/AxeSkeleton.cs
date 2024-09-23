@@ -2,11 +2,18 @@
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
-{
+{    
     public class AxeSkeleton : MonsterObject
     {
         public long FearTime;
-        public byte AttackRange = 6;
+
+        protected virtual byte AttackRange
+        {
+            get
+            {
+                return 6;
+            }
+        }
 
         protected internal AxeSkeleton(MonsterInfo info)
             : base(info)
@@ -28,25 +35,16 @@ namespace Server.MirObjects.Monsters
 
             ShockTime = 0;
 
-
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
             Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
-
 
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
-            int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
-
-            DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.ACAgility);
-            ActionList.Add(action);
-
-            if (Target.Dead)
-                FindTarget();
-
+            ProjectileAttack(damage);
         }
 
         protected override void ProcessTarget()

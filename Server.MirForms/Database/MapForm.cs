@@ -1,10 +1,5 @@
-﻿using Server.MirEnvir;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
+﻿using Server.MirDatabase;
+using Server.MirEnvir;
 
 namespace Server.MirForms
 {
@@ -12,7 +7,6 @@ namespace Server.MirForms
     {
         public static Envir EditEnvir = null;
 
-        private static int _endIndex = 0;
         public static string Path = string.Empty;
 
         private static List<String> errors = new List<String>();
@@ -25,10 +19,8 @@ namespace Server.MirForms
             if (EditEnvir == null) return;
 
             var lines = File.ReadAllLines(Path);
-            _endIndex = EditEnvir.MapIndex; // Last map index number
             for (int i = 0; i < lines.Length; i++)
             {
-
                 if (lines[i].StartsWith("[")) // Read map info
                 {
                     lines[i] = System.Text.RegularExpressions.Regex.Replace(lines[i], @"\s+", " "); // Clear white-space
@@ -38,13 +30,13 @@ namespace Server.MirForms
                     if (lines[i].Contains(';'))
                         lines[i] = lines[i].Substring(0, lines[i].IndexOf(";", System.StringComparison.Ordinal));
 
-                    MirDatabase.MapInfo newMapInfo = new MirDatabase.MapInfo { Index = ++_endIndex };
+                    MirDatabase.MapInfo newMapInfo = new MirDatabase.MapInfo { Index = ++EditEnvir.MapIndex };
 
                     var a = lines[i].Split(']'); // Split map info into [0] = MapFile MapName 0 || [1] = Attributes
                     string[] b = a[0].Split(' ');
 
                     newMapInfo.FileName = b[0].TrimStart('['); // Assign MapFile from variable and trim leading '[' char
-                    newMapInfo.Title = b[1]; // Assign MapName from variable
+                    newMapInfo.Title = b[1].Replace("*", " "); // Assign MapName from variable, replacing asterisk with space
 
                     List<string> mapAttributes = new List<string>(); // Group of all attributes associated with that map
                     mapAttributes.AddRange(a[1].Split(' '));
@@ -81,7 +73,7 @@ namespace Server.MirForms
                     if (newMapInfo.NoReconnect)
                     {
                         int index = mapAttributes.FindIndex(x => x.StartsWith("NORECONNECT(".ToUpper()));
-                        newMapInfo.NoReconnectMap = newMapInfo.NoReconnectMap == string.Empty ? "0" : mapAttributes[index].TrimStart("NORECONNECT(".ToCharArray()).TrimEnd(')');
+                        newMapInfo.NoReconnectMap = mapAttributes[index].TrimStart("NORECONNECT(".ToCharArray()).TrimEnd(')');
                     }
 
                     if (mapAttributes.Any(x => x.StartsWith("MINIMAP(".ToUpper())))
@@ -145,7 +137,8 @@ namespace Server.MirForms
                     EditEnvir.MapInfoList.Add(newMapInfo); // Add map to list
                 }
                 else if (lines[i].StartsWith(";")) continue;
-                else errors.Add("Error on Line " + i + ": " + lines[i] + "");
+                else
+                    continue;
             }
 
             for (int j = 0; j < EditEnvir.MapInfoList.Count; j++)
@@ -175,6 +168,19 @@ namespace Server.MirForms
                                 int conqIndex = int.Parse(conq.Replace("NEEDCONQUEST(", "").Replace(")", "")); //get value
                                 newMovement.ConquestIndex = conqIndex;
                                 lines[k] = lines[k].Remove(conqLocation);
+                            }
+                            if (lines[k].Contains("SHOWONBIGMAP"))
+                            {
+                                newMovement.ShowOnBigMap = true;
+                                lines[k] = lines[k].Replace("SHOWONBIGMAP", "");
+                            }
+                            if (lines[k].Contains("BIGMAPICON"))
+                            {
+                                int iconLocation = lines[k].IndexOf(" BIGMAPICON");
+                                string icon = lines[k].Substring(iconLocation);
+                                int iconIndex = int.Parse(icon.Replace("BIGMAPICON(", "").Replace(")", "")); //get value
+                                newMovement.Icon = iconIndex;
+                                lines[k] = lines[k].Remove(iconLocation);
                             }
 
                             lines[k] = lines[k].Replace('.', ','); // Replace point with comma
@@ -241,7 +247,12 @@ namespace Server.MirForms
                                 }
                             }
 
-                            if (toMap < 0) continue;
+                            if (toMap < 0)
+                            {
+                                errors.Add("Destination Map Failed on line: " + lines[k] + "");
+                                continue;
+                            }
+
                             newMovement.MapIndex = toMap;
                             newMovement.Source = new Point(int.Parse(d[0]), int.Parse(d[1]));
                             newMovement.Destination = new Point(int.Parse(e[0]), int.Parse(e[1]));
@@ -407,7 +418,7 @@ namespace Server.MirForms
                     if (MonGen[j].Contains(';'))
                         MonGen[j] = MonGen[j].Substring(0, MonGen[j].IndexOf(";", System.StringComparison.Ordinal));
 
-                    var Line = System.Text.RegularExpressions.Regex.Replace(MonGen[j], @"\s+", " ").Split(' ');
+                    var Line = System.Text.RegularExpressions.Regex.Replace(MonGen[j], @"\s+", " ").Split(',');
 
                     if (Line.Length < 7) continue;
 
@@ -422,7 +433,8 @@ namespace Server.MirForms
                             Range = Convert.ToInt16(Line[4]),
                             Count = Convert.ToInt16(Line[5]),
                             Delay = Convert.ToInt16(Line[6]),
-                            Direction = (Line.Length == 8) ? Convert.ToInt16(Line[7]) : 0                    
+                            Direction = (Line.Length >= 8) ? Convert.ToInt16(Line[7]) : 0,
+                            RoutePath = (Line.Length >= 9) ? Line[8] : string.Empty
                         };
 
                         monGenList.Add(MonGenItem);
@@ -442,7 +454,8 @@ namespace Server.MirForms
     {
         public string
             Map = string.Empty,
-            Name = string.Empty;
+            Name = string.Empty,
+            RoutePath = string.Empty;
 
         public int
             X = 0,

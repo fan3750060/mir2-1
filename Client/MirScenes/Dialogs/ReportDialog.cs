@@ -1,15 +1,6 @@
 ﻿using Client.MirControls;
 using Client.MirGraphics;
-using Client.MirNetwork;
 using Client.MirSounds;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
 {
@@ -80,37 +71,5 @@ namespace Client.MirScenes.Dialogs
         {
             throw new NotImplementedException();
         }
-
-        private void SendScreenshot()
-        {
-            Point location = Program.Form.PointToClient(Program.Form.Location);
-
-            location = new Point(-location.X, -location.Y);
-
-            using (Bitmap image = CMain.GetImage(Program.Form.Handle, new Rectangle(location, Program.Form.ClientSize)))
-            {
-                var chunks = Functions.SplitArray(Functions.ImageToByteArray(image), 20000);
-
-                int i = 0;
-
-                foreach (var chunk in chunks)
-                {
-                    Network.Enqueue(new C.ReportIssue { Image = chunk, ImageSize = chunks.Count(), ImageChunk = ++i });
-                }
-            }
-        }
-
-
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
-        public void Show()
-        {
-            if (Visible) return;
-            Visible = true;
-        }
-
     }
 }

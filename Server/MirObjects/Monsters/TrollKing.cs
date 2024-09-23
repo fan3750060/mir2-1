@@ -1,5 +1,4 @@
 ﻿using Server.MirDatabase;
-using System.Collections.Generic;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -37,7 +36,7 @@ namespace Server.MirObjects.Monsters
                 {
                     Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 0 });
 
-                    int damage = GetAttackPower(MinMC, MaxMC);
+                    int damage = GetAttackPower(Stats[Stat.MinMC], Stats[Stat.MaxMC]);
                     if (damage == 0) return;
 
                     List<MapObject> targets = FindAllTargets(3, CurrentLocation, false);
@@ -65,7 +64,7 @@ namespace Server.MirObjects.Monsters
 
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    int damage = GetAttackPower(MinDC, MaxDC);
+                    int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                     if (damage == 0) continue;
 
                     int delay = Functions.MaxDistance(CurrentLocation, targets[i].CurrentLocation) * 50 + 500; //50 MS per Step
@@ -75,12 +74,8 @@ namespace Server.MirObjects.Monsters
                 }
             }
 
-
             ActionTime = Envir.Time + 500;
             AttackTime = Envir.Time + AttackSpeed;
-
-            if (Target.Dead)
-                FindTarget();
         }
 
         protected override void CompleteAttack(IList<object> data)
@@ -104,20 +99,9 @@ namespace Server.MirObjects.Monsters
 
             target.Attacked(this, damage, defence);
 
-            if (target.Attacked(this, damage, DefenceType.MACAgility) > 0)
-            {
-                if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                {
-                    Target.ApplyPoison(new Poison
-                    {
-                        Owner = this,
-                        Duration = Envir.Random.Next(MaxMC),
-                        PType = PoisonType.Stun,
-                        Value = damage,
-                        TickSpeed = 1000
-                    }, this);
-                }
-            }
+            if (target.Attacked(this, damage, DefenceType.MACAgility) <= 0) return;
+
+            PoisonTarget(target, 1, Envir.Random.Next(Stats[Stat.MaxMC]), PoisonType.Dazed, 1000);
         }
 
         protected override void ProcessTarget()

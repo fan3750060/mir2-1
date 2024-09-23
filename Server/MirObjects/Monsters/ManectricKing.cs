@@ -1,8 +1,5 @@
 ﻿using Server.MirDatabase;
 using Server.MirEnvir;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -39,9 +36,13 @@ namespace Server.MirObjects.Monsters
                 return;
             }
 
+            ShockTime = 0;
+            ActionTime = Envir.Time + 500;
+            AttackTime = Envir.Time + AttackSpeed;
+
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
 
-            if((HP * 100 / MaxHP) < 20 && MassAttackTime < Envir.Time)
+            if ((HP * 100 / Stats[Stat.HP]) < 20 && MassAttackTime < Envir.Time)
             {
                 ShockTime = 0;
                 ActionTime = Envir.Time + 500;
@@ -53,74 +54,39 @@ namespace Server.MirObjects.Monsters
 
                 if (targets.Count == 0) return;
 
-                int damage = GetAttackPower(MinDC, MaxDC);
+                int damage = GetAttackPower(Stats[Stat.MinMC], Stats[Stat.MaxMC]);
 
                 for (int i = 0; i < targets.Count; i++)
                 {
                     int delay = Functions.MaxDistance(CurrentLocation, targets[i].CurrentLocation) * 50 + 750; //50 MS per Step
 
-                    DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, Target, damage, DefenceType.ACAgility);
+                    DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.ACAgility);
                     ActionList.Add(action);
                 }
 
                 MassAttackTime = Envir.Time + 2000 + (Envir.Random.Next(5) * 1000);
                 ActionTime = Envir.Time + 800;
-                AttackTime = Envir.Time + (AttackSpeed);
+                AttackTime = Envir.Time + AttackSpeed;
                 return;
             }
 
-            if (Functions.InRange(CurrentLocation, Target.CurrentLocation, AttackRange - 1) 
-                && Envir.Random.Next(3) == 0)
+            if (Functions.InRange(CurrentLocation, Target.CurrentLocation, AttackRange - 1) && Envir.Random.Next(3) == 0)
             {
                 Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 1 });
-                LineAttack(AttackRange - Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) + 1, true);
+
+                int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
+                if (damage == 0) return;
+
+                LineAttack(damage, AttackRange - Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) + 1, 500, DefenceType.ACAgility, true);
             }
             else
             {
                 Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 0 });
-                LineAttack(AttackRange);
-            }
 
-            ShockTime = 0;
-            ActionTime = Envir.Time + 500;
-            AttackTime = Envir.Time + (AttackSpeed);
-        }
+                int damage = GetAttackPower(Stats[Stat.MinMC], Stats[Stat.MaxMC]);
+                if (damage == 0) return;
 
-        private void LineAttack(int distance, bool push = false)
-        {
-            int damage = GetAttackPower(MinDC, MaxDC);
-            if (damage == 0) return;
-
-            int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500;
-
-            for(int i = distance; i >= 1; i--)
-            {
-                Point target = Functions.PointMove(CurrentLocation, Direction, i);
-
-                if (!CurrentMap.ValidPoint(target)) continue;
-
-                Cell cell = CurrentMap.GetCell(target);
-                if (cell.Objects == null) continue;
-
-                for (int o = 0; o < cell.Objects.Count; o++)
-                {
-                    MapObject ob = cell.Objects[o];
-                    if (ob.Race == ObjectType.Monster || ob.Race == ObjectType.Player)
-                    {
-                        if (!ob.IsAttackTarget(this)) continue;
-
-                        if (push)
-                        {
-                            ob.Pushed(this, Direction, distance - 1);
-                        }
-
-                        ob.Attacked(this, damage, DefenceType.ACAgility);
-
-                    }
-                    else continue;
-
-                    break;
-                }
+                LineAttack(damage, AttackRange, 500, DefenceType.ACAgility, false);
             }
         }
     }

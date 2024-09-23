@@ -1,10 +1,4 @@
-﻿using System.Drawing;
-using Server.MirObjects;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+﻿using Server.MirObjects;
 using System.Text.RegularExpressions;
 using Server.MirEnvir;
 
@@ -40,6 +34,14 @@ namespace Server.MirDatabase
             set { _finishNpcIndex = value; }
         }
 
+        public NPCObject FinishNPC
+        {
+            get
+            {
+                return Envir.NPCs.Single(x => x.ObjectID == FinishNpcIndex);
+            }
+        }
+
         public string 
             Name = string.Empty, 
             Group = string.Empty, 
@@ -50,7 +52,8 @@ namespace Server.MirDatabase
             FlagMessage = string.Empty;
 
         public List<string> Description = new List<string>();
-        public List<string> TaskDescription = new List<string>(); 
+        public List<string> TaskDescription = new List<string>();
+        public List<string> ReturnDescription = new List<string>();
         public List<string> CompletionDescription = new List<string>(); 
 
         public int RequiredMinLevel, RequiredMaxLevel, RequiredQuest;
@@ -58,11 +61,15 @@ namespace Server.MirDatabase
 
         public QuestType Type;
 
+        public int TimeLimitInSeconds = 0;
+
         public List<QuestItemTask> CarryItems = new List<QuestItemTask>(); 
 
         public List<QuestKillTask> KillTasks = new List<QuestKillTask>();
         public List<QuestItemTask> ItemTasks = new List<QuestItemTask>();
         public List<QuestFlagTask> FlagTasks = new List<QuestFlagTask>();
+        //TODO: ZoneTasks
+        //TODO: EscortTasks
 
         public uint GoldReward;
         public uint ExpReward;
@@ -83,11 +90,8 @@ namespace Server.MirDatabase
             FileName = reader.ReadString();
             RequiredMinLevel = reader.ReadInt32();
 
-            if (Envir.LoadVersion >= 38)
-            {
-                RequiredMaxLevel = reader.ReadInt32();
-                if (RequiredMaxLevel == 0) RequiredMaxLevel = ushort.MaxValue;
-            }
+            RequiredMaxLevel = reader.ReadInt32();
+            if (RequiredMaxLevel == 0) RequiredMaxLevel = ushort.MaxValue;
 
             RequiredQuest = reader.ReadInt32();
             RequiredClass = (RequiredClass)reader.ReadByte();
@@ -95,7 +99,12 @@ namespace Server.MirDatabase
             GotoMessage = reader.ReadString();
             KillMessage = reader.ReadString();
             ItemMessage = reader.ReadString();
-            if(Envir.LoadVersion >= 37) FlagMessage = reader.ReadString();
+            FlagMessage = reader.ReadString();
+
+            if (Envir.LoadVersion > 90)
+            {
+                TimeLimitInSeconds = reader.ReadInt32();
+            }
 
             LoadInfo();
         }
@@ -115,6 +124,7 @@ namespace Server.MirDatabase
             writer.Write(KillMessage);
             writer.Write(ItemMessage);
             writer.Write(FlagMessage);
+            writer.Write(TimeLimitInSeconds);
         }
 
         public void LoadInfo(bool clear = false)
@@ -153,6 +163,7 @@ namespace Server.MirDatabase
             const string
                 descriptionCollectKey = "[@DESCRIPTION]",
                 descriptionTaskKey = "[@TASKDESCRIPTION]",
+                descriptionReturnKey = "[@RETURNDESCRIPTION]",
                 descriptionCompletionKey = "[@COMPLETION]",
                 carryItemsKey = "[@CARRYITEMS]",
                 killTasksKey = "[@KILLTASKS]",
@@ -168,7 +179,7 @@ namespace Server.MirDatabase
             { 
                 descriptionCollectKey, descriptionTaskKey, descriptionCompletionKey,
                 carryItemsKey, killTasksKey, itemTasksKey, flagTasksKey,
-                fixedRewardsKey, selectRewardsKey, expRewardKey, goldRewardKey, creditRewardKey
+                fixedRewardsKey, selectRewardsKey, expRewardKey, goldRewardKey, creditRewardKey, descriptionReturnKey
             };
 
             int currentHeader = 0;
@@ -195,6 +206,9 @@ namespace Server.MirDatabase
                                 break;
                             case descriptionTaskKey:
                                 TaskDescription.Add(innerLine);
+                                break;
+                            case descriptionReturnKey:
+                                ReturnDescription.Add(innerLine);
                                 break;
                             case descriptionCompletionKey:
                                 CompletionDescription.Add(innerLine);
@@ -247,9 +261,9 @@ namespace Server.MirDatabase
             if (line.Length < 1) return;
 
             string[] split = line.Split(' ');
-            uint count = 1;
+            ushort count = 1;
 
-            if (split.Length > 1) uint.TryParse(split[1], out count);
+            if (split.Length > 1) ushort.TryParse(split[1], out count);
 
             ItemInfo mInfo = Envir.GetItemInfo(split[0]);
 
@@ -292,11 +306,11 @@ namespace Server.MirDatabase
             if (line.Length < 1) return null;
 
             string[] split = line.Split(' ');
-            uint count = 1;
+            ushort count = 1;
             string message = "";
 
             ItemInfo mInfo = Envir.GetItemInfo(split[0]);
-            if (split.Length > 1) uint.TryParse(split[1], out count);
+            if (split.Length > 1) ushort.TryParse(split[1], out count);
 
             var match = _regexMessage.Match(line);
             if (match.Success)
@@ -379,12 +393,14 @@ namespace Server.MirDatabase
                 Group = Group,
                 Description = Description,
                 TaskDescription = TaskDescription,
+                ReturnDescription = ReturnDescription,
                 CompletionDescription = CompletionDescription,
                 MinLevelNeeded = RequiredMinLevel,
                 MaxLevelNeeded = RequiredMaxLevel,
                 ClassNeeded = RequiredClass,
                 QuestNeeded = RequiredQuest,
                 Type = Type,
+                TimeLimitInSeconds = TimeLimitInSeconds,
                 RewardGold = GoldReward,
                 RewardExp = ExpReward,
                 RewardCredit = CreditReward,
@@ -450,7 +466,7 @@ namespace Server.MirDatabase
     public class QuestItemTask
     {
         public ItemInfo Item;
-        public uint Count;
+        public ushort Count;
         public string Message;
     }
 

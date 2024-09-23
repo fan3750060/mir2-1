@@ -1,6 +1,4 @@
-﻿using System;
-using Server.MirDatabase;
-using Server.MirEnvir;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -30,7 +28,7 @@ namespace Server.MirObjects.Monsters
         {
             return Parent.IsAttackTarget(attacker);
         }
-        public override bool IsAttackTarget(PlayerObject attacker)
+        public override bool IsAttackTarget(HumanObject attacker)
         {
             return Parent.IsAttackTarget(attacker);
         }
@@ -39,7 +37,7 @@ namespace Server.MirObjects.Monsters
 
         protected override void ProcessSearch() { }
 
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             return Parent.Attacked(attacker, damage, type, damageWeapon);
         }
@@ -71,13 +69,7 @@ namespace Server.MirObjects.Monsters
 
             if (CurrentMap == null) return;
 
-            for (int i = CurrentMap.Players.Count - 1; i >= 0; i--)
-            {
-                PlayerObject player = CurrentMap.Players[i];
-
-                if (Functions.InRange(CurrentLocation, player.CurrentLocation, Globals.DataRange))
-                    Broadcast(GetInfo());
-            }
+            Broadcast(GetInfo());
         }
     }
 }

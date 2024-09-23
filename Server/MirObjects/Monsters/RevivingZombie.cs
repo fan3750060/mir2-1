@@ -1,17 +1,16 @@
 ﻿using Server.MirDatabase;
-using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class RevivingZombie : MonsterObject
+    public class RevivingZombie : MonsterObject
     {
-        public uint RevivalCount;
+        public byte RevivalCount;
         public int LifeCount;
         public long RevivalTime, DieTime;
 
         public override uint Experience
         {
-            get { return Info.Experience * (100 - (25 * RevivalCount)) / 100; }
+            get { return (uint)(Info.Experience * (100 - (25 * RevivalCount)) / 100); }
         }
 
         protected internal RevivingZombie(MonsterInfo info)
@@ -28,14 +27,13 @@ namespace Server.MirObjects.Monsters
             base.Die();
         }
 
-
         protected override void ProcessAI()
         {
             if (Dead && Envir.Time > DieTime + RevivalTime && RevivalCount < LifeCount)
             {
                 RevivalCount++;
 
-                uint newhp = MaxHP * (100 - (25 * RevivalCount)) / 100;
+                int newhp = Stats[Stat.HP] * (100 - (25 * RevivalCount)) / 100;
                 Revive(newhp, false);
             }
 

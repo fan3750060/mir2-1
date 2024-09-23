@@ -1,11 +1,10 @@
-﻿using System;
 using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class Khazard : MonsterObject
+    public class Khazard : MonsterObject
     {
         public long PullTime;
         public bool Range;
@@ -44,7 +43,6 @@ namespace Server.MirObjects.Monsters
 
         protected override void Attack()
         {
-
             if (!Target.IsAttackTarget(this))
             {
                 Target = null;
@@ -75,7 +73,7 @@ namespace Server.MirObjects.Monsters
 
                 if (target == Target.CurrentLocation)
                 {
-                    if (Envir.Random.Next(Settings.MagicResistWeight) < Target.MagicResist) continue;
+                    if (Envir.Random.Next(Settings.MagicResistWeight) < Target.Stats[Stat.MagicResist]) continue;
                     MirDirection pushdir = Functions.DirectionFromPoint(Target.CurrentLocation, CurrentLocation);
                     Target.Pushed(this, pushdir, i);
                 }

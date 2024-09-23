@@ -1,11 +1,6 @@
-﻿using System;
-using System.Reflection;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Reflection;
 using System.Text;
 using System.Net.Sockets;
-using System.IO;
 using Server.MirEnvir;
 
 namespace Server.MirNetwork
@@ -15,6 +10,10 @@ namespace Server.MirNetwork
         protected static Envir Envir
         {
             get { return Envir.Main; }
+        }
+        protected static MessageQueue MessageQueue
+        {
+            get { return MessageQueue.Instance; }
         }
 
         public readonly string IPAddress;
@@ -53,9 +52,7 @@ namespace Server.MirNetwork
             }
             catch (Exception ex)
             {
-                File.AppendAllText(Path.Combine(Settings.LogPath,
-                                                "Error Log (" + DateTime.Now.Date.ToString("dd-MM-yyyy") + ").txt"),
-                                   String.Format("[{0}]: {1}" + Environment.NewLine, DateTime.Now, ex.ToString()));
+                MessageQueue.Enqueue(ex);
             }
         }
 
@@ -110,9 +107,7 @@ namespace Server.MirNetwork
             }
             catch (Exception ex)
             {
-                File.AppendAllText(Path.Combine(Settings.LogPath,
-                                                "Error Log (" + DateTime.Now.Date.ToString("dd-MM-yyyy") + ").txt"),
-                                   String.Format("[{0}]: {1}" + Environment.NewLine, DateTime.Now, ex.ToString()));
+                MessageQueue.Enqueue(ex);
             }
         }
         public void Disconnect()
@@ -131,9 +126,7 @@ namespace Server.MirNetwork
             }
             catch (Exception ex)
             {
-                File.AppendAllText(Path.Combine(Settings.LogPath,
-                                                "Error Log (" + DateTime.Now.Date.ToString("dd-MM-yyyy") + ").txt"),
-                                   String.Format("[{0}]: {1}" + Environment.NewLine, DateTime.Now, ex.ToString()));
+                MessageQueue.Enqueue(ex);
             }
         }
         public void SendDisconnect()

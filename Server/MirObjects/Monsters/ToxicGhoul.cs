@@ -1,9 +1,6 @@
-﻿using System;
-using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
-using System.Collections.Generic;
 
 namespace Server.MirObjects.Monsters
 {
@@ -24,33 +21,30 @@ namespace Server.MirObjects.Monsters
                 return;
             }
 
-
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
             Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
-
 
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
-            if (Target.Attacked(this, damage, DefenceType.MACAgility) > 0 && Envir.Random.Next(8) == 0)
-            {
-                if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                {
-                    int poison = GetAttackPower(MinSC, MaxSC);
+            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.MACAgility);
+            ActionList.Add(action);
+        }
 
-                    Target.ApplyPoison(new Poison
-                    {
-                        Owner = this,
-                        Duration = 5,
-                        PType = PoisonType.Green,
-                        Value = poison,
-                        TickSpeed = 2000
-                    }, this);
-                }
-            }
+        protected override void CompleteAttack(IList<object> data)
+        {
+            MapObject target = (MapObject)data[0];
+            int damage = (int)data[1];
+            DefenceType defence = (DefenceType)data[2];
+
+            if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
+
+            if (target.Attacked(this, damage, defence) <= 0) return;
+
+            PoisonTarget(target, 8, 5, PoisonType.Green, 2000);
         }
 
         public override void Die()
@@ -70,18 +64,13 @@ namespace Server.MirObjects.Monsters
 
             for (int i = 0; i < targets.Count; i++)
             {
-                int damage = GetAttackPower(MinDC, MaxDC);
+                int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                 if (damage == 0) return;
 
                 if (targets[i].Attacked(this, damage, DefenceType.ACAgility) <= 0) return;
 
-                if (Envir.Random.Next(Settings.PoisonResistWeight) >= targets[i].PoisonResist)
-                {
-                    if (Envir.Random.Next(5) == 0)
-                        targets[i].ApplyPoison(new Poison { Owner = this, Duration = 5, PType = PoisonType.Green, Value = GetAttackPower(MinSC, MaxSC), TickSpeed = 2000 }, this);
-                }
+                PoisonTarget(targets[i], 5, 5, PoisonType.Green, 2000);
             }
         }
-
     }
 }

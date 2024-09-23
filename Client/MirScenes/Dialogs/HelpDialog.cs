@@ -1,18 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using Client.MirControls;
+﻿using Client.MirControls;
 using Client.MirGraphics;
-using Client.MirNetwork;
-using Client.MirObjects;
 using Client.MirSounds;
-using S = ServerPackets;
-using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
 {
@@ -150,6 +138,19 @@ namespace Client.MirScenes.Dialogs
                 new HelpPage("Mounts", 26, null) { Parent = this, Location = location, Visible = false },
                 new HelpPage("Fishing", 27, null) { Parent = this, Location = location, Visible = false },
                 new HelpPage("Gems and Orbs", 28, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Heroes", 29, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Heroes", 30, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Heroes", 31, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Heroes", 32, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Heroes", 33, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Guild Buffs", 34, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Guild Buffs", 35, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Guild Buffs", 36, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Awakening", 37, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Awakening", 38, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Awakening", 39, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Awakening", 40, null) { Parent = this, Location = location, Visible = false },
+                new HelpPage("Awakening", 41, null) { Parent = this, Location = location, Visible = false },
             };
 
             Pages.AddRange(imagePages);
@@ -197,17 +198,6 @@ namespace Client.MirScenes.Dialogs
             Show();
         }
 
-        public void Show()
-        {
-            if (Visible) return;
-            Visible = true;
-        }
-
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
 
         public void Toggle()
         {
@@ -222,25 +212,28 @@ namespace Client.MirScenes.Dialogs
     {
         public ShortcutPage1()
         {
-            Shortcuts = new List<ShortcutInfo>();
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Exit), "Exit the game"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Logout), "Log out"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Bar1Skill1) + "-" + CMain.InputKeys.GetKey(KeybindOptions.Bar1Skill8), "Skill buttons"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Inventory), "Inventory window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Equipment), "Status window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Skills), "Skill window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Group), "Group window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Trade), "Trade window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Friends), "Friend window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Minimap), "Minimap window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Guilds), "Guild window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.GameShop), "Gameshop window (open / close)"));
-            //Shortcuts.Add(new ShortcutInfo("K", "Rental window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Relationship), "Engagement window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Belt), "Belt window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Options), "Option window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Help), "Help window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Mount), "Mount / Dismount ride"));
+            Shortcuts = new List<ShortcutInfo>
+            {
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Exit), "Exit the game"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Logout), "Log out"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Bar1Skill1) + "-" + CMain.InputKeys.GetKey(KeybindOptions.Bar1Skill8), "Skill buttons"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Inventory), "Inventory window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Equipment), "Status window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Skills), "Skill window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Group), "Group window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Trade), "Trade window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Friends), "Friend window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Minimap), "Minimap window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Guilds), "Guild window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.GameShop), "Gameshop window (open / close)"),
+                //Shortcuts.Add(new ShortcutInfo("K", "Rental window (open / close)"));
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Relationship), "Engagement window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Belt), "Belt window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Options), "Option window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Help), "Help window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Mount), "Mount / Dismount ride"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.TargetSpellLockOn), "Lock spell onto target not cursor location")
+            };
 
             LoadKeyBinds();
         }
@@ -249,27 +242,29 @@ namespace Client.MirScenes.Dialogs
     {
         public ShortcutPage2()
         {
-            Shortcuts = new List<ShortcutInfo>();
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.ChangePetmode), "Toggle pet attack pet"));
-            //Shortcuts.Add(new ShortcutInfo("Ctrl + F", "Change the font in the chat box"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.ChangeAttackmode), "Toggle player attack mode"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodePeace), "Peace Mode - Attack monsters only"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeGroup), "Group Mode - Attack all subjects except your group members"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeGuild), "Guild Mode - Attack all subjects except your guild members"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeRedbrown), "Good/Evil Mode - Attack PK players and monsters only"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeAll), "All Attack Mode - Attack all subjects"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Bigmap), "Show the field map"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Skillbar), "Show the skill bar"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Autorun), "Auto run on / off"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Cameramode), "Show / Hide interface"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Pickup), "Highlight / Pickup Items"));
-            Shortcuts.Add(new ShortcutInfo("Ctrl + Right Click", "Show other players kits"));
-            //Shortcuts.Add(new ShortcutInfo("F12", "Chat macros"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Screenshot), "Screen Capture"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Fishing), "Open / Close fishing window"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Mentor), "Mentor window (open / close)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.CreaturePickup), "Creature Pickup (Multi Mouse Target)"));
-            Shortcuts.Add(new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.CreatureAutoPickup), "Creature Pickup (Single Mouse Target)"));
+            Shortcuts = new List<ShortcutInfo>
+            {
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.ChangePetmode), "Toggle pet attack pet"),
+                //Shortcuts.Add(new ShortcutInfo("Ctrl + F", "Change the font in the chat box"));
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.ChangeAttackmode), "Toggle player attack mode"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodePeace), "Peace Mode - Attack monsters only"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeGroup), "Group Mode - Attack all subjects except your group members"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeGuild), "Guild Mode - Attack all subjects except your guild members"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeRedbrown), "Good/Evil Mode - Attack PK players and monsters only"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.AttackmodeAll), "All Attack Mode - Attack all subjects"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Bigmap), "Show the field map"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Skillbar), "Show the skill bar"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Autorun), "Auto run on / off"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Cameramode), "Show / Hide interface"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Pickup), "Highlight / Pickup Items"),
+                new ShortcutInfo("Ctrl + Right Click", "Show other players kits"),
+                //Shortcuts.Add(new ShortcutInfo("F12", "Chat macros"));
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Screenshot), "Screen Capture"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Fishing), "Open / Close fishing window"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.Mentor), "Mentor window (open / close)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.CreaturePickup), "Creature Pickup (Multi Mouse Target)"),
+                new ShortcutInfo(CMain.InputKeys.GetKey(KeybindOptions.CreatureAutoPickup), "Creature Pickup (Single Mouse Target)")
+            };
 
             LoadKeyBinds();
         }
@@ -278,11 +273,13 @@ namespace Client.MirScenes.Dialogs
     {
         public ShortcutPage3()
         {
-            Shortcuts = new List<ShortcutInfo>();
-            //Shortcuts.Add(new ShortcutInfo("` / Ctrl", "Change the skill bar"));
-            Shortcuts.Add(new ShortcutInfo("/(username)", "Command to whisper to others"));
-            Shortcuts.Add(new ShortcutInfo("!(text)", "Command to shout to others nearby"));
-            Shortcuts.Add(new ShortcutInfo("!~(text)", "Command to guild chat"));
+            Shortcuts = new List<ShortcutInfo>
+            {
+                //Shortcuts.Add(new ShortcutInfo("` / Ctrl", "Change the skill bar"));
+                new ShortcutInfo("/(username)", "Command to whisper to others"),
+                new ShortcutInfo("!(text)", "Command to shout to others nearby"),
+                new ShortcutInfo("!~(text)", "Command to guild chat")
+            };
 
             LoadKeyBinds();
         }

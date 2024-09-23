@@ -4,18 +4,29 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Shared.Extensions;
 
 namespace LibraryEditor
 {
     public partial class LMain : Form
     {
         private readonly Dictionary<int, int> _indexList = new Dictionary<int, int>();
-        private MLibraryV2 _library;
+        private MLibraryV2 _library, _referenceLibrary, _shadowLibrary;
         private MLibraryV2.MImage _selectedImage, _exportImage;
         private Image _originalImage;
+        public Bitmap _referenceImage;
+
+        protected bool ImageTabActive = true;
+        protected bool MaskTabActive = false;
+        protected bool FrameTabActive = false;
+
+        public bool ApplyOffsets => checkBox1.Checked;
+
+        protected string ViewMode = "Image";
 
         [DllImport("user32.dll")]
         private static extern int SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
@@ -24,25 +35,19 @@ namespace LibraryEditor
         {
             InitializeComponent();
 
+            this.FrameAction.ValueType = typeof(MirAction);
+            this.FrameAction.DataSource = Enum.GetValues(typeof(MirAction));
+
+
             SendMessage(PreviewListView.Handle, 4149, 0, 5242946); //80 x 66
 
             this.AllowDrop = true;
             this.DragEnter += new DragEventHandler(Form1_DragEnter);
             this.DragDrop += new DragEventHandler(Form1_DragDrop);
-            if (Program.openFileWith.Length > 0 &&
-                File.Exists(Program.openFileWith))
+
+            if (Program.openFileWith.Length > 0 && File.Exists(Program.openFileWith))
             {
-                _library = new MLibraryV2(Program.openFileWith);
-                PreviewListView.VirtualListSize = _library.Images.Count;
-
-                // Show .Lib path in application title.
-                FileInfo fileInfo = new FileInfo(Program.openFileWith);
-                this.Text = fileInfo.FullName.ToString();
-                OpenLibraryDialog.FileName = fileInfo.Name;
-                PreviewListView.SelectedIndices.Clear();
-
-                if (PreviewListView.Items.Count > 0)
-                    PreviewListView.Items[0].Selected = true;
+                OpenLibrary(Program.openFileWith);
             }
         }
 
@@ -54,35 +59,49 @@ namespace LibraryEditor
                 Path.GetExtension(files[0]).ToUpper() == ".WZL" ||
                 Path.GetExtension(files[0]).ToUpper() == ".MIZ")
             {
-                try
-                {
-                    ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = 8 };
-                    Parallel.For(0, files.Length, options, i =>
-                    {
-                        if (Path.GetExtension(files[i]) == ".wtl")
-                        {
-                            WTLLibrary WTLlib = new WTLLibrary(files[i]);
-                            WTLlib.ToMLibrary();
-                        }
-                        else
-                        {
-                            WeMadeLibrary WILlib = new WeMadeLibrary(files[i]);
-                            WILlib.ToMLibrary();
-                        }
-                        toolStripProgressBar.Value++;
-                    });
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.ToString());
-                }
-
+                toolStripProgressBar.Maximum = files.Length;
                 toolStripProgressBar.Value = 0;
 
-                MessageBox.Show(
-                    string.Format("Successfully converted {0} {1}",
-                    (OpenWeMadeDialog.FileNames.Length).ToString(),
-                    (OpenWeMadeDialog.FileNames.Length > 1) ? "libraries" : "library"));
+                new Action(() =>
+                {
+                    try
+                    {
+                        ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = 8 };
+                        Parallel.For(0, files.Length, options, i =>
+                        {
+                            if (Path.GetExtension(files[i]) == ".wtl")
+                            {
+                                WTLLibrary WTLlib = new WTLLibrary(files[i]);
+                                WTLlib.ToMLibrary();
+                            }
+                            else
+                            {
+                                WeMadeLibrary WILlib = new WeMadeLibrary(files[i]);
+                                WILlib.ToMLibrary();
+                            }
+
+                            Invoke(new Action(() =>
+                            {
+                                toolStripProgressBar.Value++;
+                            }));
+
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.ToString());
+                    }
+
+                    Invoke(new Action(() =>
+                    {
+                        toolStripProgressBar.Value = 0;
+                    }));
+
+                    MessageBox.Show(
+                        string.Format("Successfully converted {0} {1}",
+                            (files.Length).ToString(),
+                            (files.Length > 1) ? "libraries" : "library"));
+                }).BeginInvoke(null, null);
             }
             else if (Path.GetExtension(files[0]).ToUpper() == ".LIB")
             {
@@ -118,10 +137,28 @@ namespace LibraryEditor
 
             WidthLabel.Text = "<No Image>";
             HeightLabel.Text = "<No Image>";
-            OffSetXTextBox.Text = string.Empty;
-            OffSetYTextBox.Text = string.Empty;
-            OffSetXTextBox.BackColor = SystemColors.Window;
-            OffSetYTextBox.BackColor = SystemColors.Window;
+            numericUpDownX.Value = 0;
+            numericUpDownY.Value = 0;
+        }
+
+        public static Bitmap AddPaddingToBitmap(Bitmap originalBitmap, int padding)
+        {
+            int newWidth = originalBitmap.Width + 2 * padding;
+            int newHeight = originalBitmap.Height + 2 * padding;
+
+            Bitmap paddedBitmap = new Bitmap(newWidth, newHeight);
+
+            using (Graphics g = Graphics.FromImage(paddedBitmap))
+            {
+                g.Clear(Color.Transparent);
+
+                int x = (paddedBitmap.Width - originalBitmap.Width) / 2;
+                int y = (paddedBitmap.Height - originalBitmap.Height) / 2;
+
+                g.DrawImage(originalBitmap, x, y);
+            }
+
+            return paddedBitmap;
         }
 
         private void PreviewListView_SelectedIndexChanged(object sender, EventArgs e)
@@ -143,10 +180,88 @@ namespace LibraryEditor
             WidthLabel.Text = _selectedImage.Width.ToString();
             HeightLabel.Text = _selectedImage.Height.ToString();
 
-            OffSetXTextBox.Text = _selectedImage.X.ToString();
-            OffSetYTextBox.Text = _selectedImage.Y.ToString();
+            numericUpDownX.Value = _selectedImage.X;
+            numericUpDownY.Value = _selectedImage.Y;
 
-            ImageBox.Image = _selectedImage.Image;
+            Bitmap referenceImage = null;
+            MLibraryV2.MImage referenceMImage = null;
+            if (_referenceLibrary != null)
+            {
+                referenceMImage = _referenceLibrary.GetMImage(PreviewListView.SelectedIndices[0]);
+                if (referenceMImage != null)
+                {
+                    referenceImage = referenceMImage.Image;
+                }
+            }
+
+            Bitmap image = null;
+            if (ViewMode == "Image")
+                image = _selectedImage.Image;
+            else
+                image = _selectedImage.MaskImage;
+
+            if (image == null)
+            {
+                ImageBox.Image = null;
+                return;
+            }
+
+            Bitmap newImage = null;
+            if (!ApplyOffsets)
+            {
+                newImage = new Bitmap(Math.Max(_referenceImage?.Width ?? 0, Math.Max(image.Width, referenceImage?.Width ?? 0)), Math.Max(_referenceImage?.Height ?? 0, Math.Max(image.Height, referenceImage?.Height ?? 0)));
+                using (var g = Graphics.FromImage(newImage))
+                {
+                    if (_referenceImage != null)
+                        g.DrawImage(_referenceImage, Point.Empty);
+                    if (referenceImage != null)
+                        g.DrawImage(referenceImage, Point.Empty);
+                    g.DrawImage(image, Point.Empty);
+                }
+            }
+            else
+            {
+                var maxWidth = Math.Max(image.Width, referenceImage?.Width ?? 0);
+                var maxHeight = Math.Max(image.Height, referenceImage?.Height ?? 0);
+
+                int offsetX = 0;
+                int offsetY = 0;
+                if (referenceImage != null)
+                {
+                    offsetX = -_selectedImage.X + referenceMImage.X;
+                    offsetY = -_selectedImage.Y + referenceMImage.Y;
+                }
+                maxWidth += Math.Abs(offsetX);
+                maxHeight += Math.Abs(offsetY);
+
+                newImage = new Bitmap(maxWidth, maxHeight);
+                using (var g = Graphics.FromImage(newImage))
+                {
+                    if (referenceImage != null)
+                        g.DrawImage(referenceImage, new Point(offsetX > 0 ? offsetX : 0, offsetY > 0 ? offsetY : 0));
+                    g.DrawImage(image, new Point(offsetX < 0 ? Math.Abs(offsetX) : 0, offsetY < 0 ? Math.Abs(offsetY) : 0));
+                }
+
+                if (_referenceImage != null)
+                {
+                    var newMaxWidth = Math.Max(_referenceImage.Width, newImage.Width + Math.Abs(_selectedImage.X));
+                    var newMaxHeight = Math.Max(_referenceImage.Height, newImage.Height + Math.Abs(_selectedImage.Y));
+
+                    var anotherNewBitmap = new Bitmap(newMaxWidth, newMaxHeight);
+                    using (var g = Graphics.FromImage(anotherNewBitmap))
+                    {
+                        g.DrawImage(_referenceImage, new Point(_selectedImage.X < 0 ? Math.Abs(_selectedImage.X) : 0, _selectedImage.Y < 0 ? Math.Abs(_selectedImage.Y) : 0));
+                        g.DrawImage(image, new Point(_selectedImage.X > 0 ? _selectedImage.X : 0, _selectedImage.Y > 0 ? _selectedImage.Y : 0));
+                    }
+                    newImage = anotherNewBitmap;
+                }
+            }
+
+            ImageBox.Image = newImage;
+            int globalOffsetX = _referenceImage != null ? 0 : referenceMImage?.X ?? _selectedImage.X;
+            int globalOffsetY = _referenceImage != null ? 0 : referenceMImage?.Y ?? _selectedImage.Y;
+
+            ImageBox.Location = ApplyOffsets ? new Point(100 + globalOffsetX, 100 + globalOffsetY) : Point.Empty;
 
             // Keep track of what image/s are selected.
             if (PreviewListView.SelectedIndices.Count > 1)
@@ -223,7 +338,7 @@ namespace LibraryEditor
                         short.TryParse(placements[1], out y);
                 }
 
-                _library.AddImage(image, x, y);
+                _library.AddImage(image, x, y, checkboxRemoveBlackOnImport.Checked);
                 toolStripProgressBar.Value++;
                 //image.Dispose();
             }
@@ -240,33 +355,108 @@ namespace LibraryEditor
             _library = new MLibraryV2(SaveLibraryDialog.FileName);
             PreviewListView.VirtualListSize = 0;
             _library.Save();
+
+            UpdateFrameGridView();
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (OpenLibraryDialog.ShowDialog() != DialogResult.OK) return;
 
+            _referenceLibrary = null;
+            _referenceImage = null;
+            OpenLibrary(OpenLibraryDialog.FileName);
+        }
+
+        private void OpenLibrary(string filename)
+        {
             ClearInterface();
             ImageList.Images.Clear();
             PreviewListView.Items.Clear();
             _indexList.Clear();
 
             if (_library != null) _library.Close();
-            _library = new MLibraryV2(OpenLibraryDialog.FileName);
+            _library = new MLibraryV2(filename);
             PreviewListView.VirtualListSize = _library.Images.Count;
 
             // Show .Lib path in application title.
-            this.Text = OpenLibraryDialog.FileName.ToString();
+            this.Text = filename;
 
             PreviewListView.SelectedIndices.Clear();
 
             if (PreviewListView.Items.Count > 0)
                 PreviewListView.Items[0].Selected = true;
+
+            UpdateFrameGridView();
+        }
+
+        private void OpenReferenceLibrary(string filename)
+        {
+            if (_referenceLibrary != null) _referenceLibrary.Close();
+            _referenceLibrary = new MLibraryV2(filename);
+        }
+
+        private void OpenShadowLibraryAndImport(string filename)
+        {
+            if (_library == null) return;
+
+            if (_shadowLibrary != null) _shadowLibrary.Close();
+            _shadowLibrary = new MLibraryV2(filename);
+
+            ImageList.Images.Clear();
+            _indexList.Clear();
+
+            for (int i = 0; i < _library.Images.Count; i++)
+            {
+                var mImage = _library.GetMImage(i);
+                if (mImage == null || mImage.Image == null) continue;
+
+                var shadowImage = _shadowLibrary.GetMImage(i);
+                if (shadowImage == null || shadowImage.Image == null) continue;
+
+                var offSetX = -mImage.X + shadowImage.X;
+                var offSetY = -mImage.Y + shadowImage.Y;
+
+                var maxWidth = Math.Max(mImage.Width, shadowImage.Width + Math.Abs(offSetX));
+                var maxHeight = Math.Max(mImage.Height, shadowImage.Height + Math.Abs(offSetY));
+
+                var newBitmap = new Bitmap(maxWidth, maxHeight);
+                using (var g = Graphics.FromImage(newBitmap))
+                {
+                    g.DrawImage(mImage.Image, new Point(offSetX < 0 ? Math.Abs(offSetX) : 0, offSetY < 0 ? Math.Abs(offSetY) : 0));
+                    g.DrawImage(shadowImage.Image, new Point(offSetX > 0 ? offSetX : 0, offSetY > 0 ? offSetY : 0));
+                }
+
+                _library.ReplaceImage(i, newBitmap, mImage.X, mImage.Y, checkboxRemoveBlackOnImport.Checked);
+            }
+
+            PreviewListView.VirtualListSize = _library.Images.Count;
+
+            try
+            {
+                PreviewListView.RedrawItems(0, PreviewListView.Items.Count - 1, true);
+
+                if (ViewMode == "Image")
+                {
+                    ImageBox.Image = _library.Images[PreviewListView.SelectedIndices[0]].Image;
+                }
+                else
+                {
+                    ImageBox.Image = _library.Images[PreviewListView.SelectedIndices[0]].MaskImage;
+                }
+            }
+            catch (Exception)
+            {
+                return;
+            }
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (_library == null) return;
+
+            UpdateFrameGridData();
+
             _library.Save();
         }
 
@@ -274,6 +464,8 @@ namespace LibraryEditor
         {
             if (_library == null) return;
             if (SaveLibraryDialog.ShowDialog() != DialogResult.OK) return;
+
+            UpdateFrameGridData();
 
             _library.FileName = SaveLibraryDialog.FileName;
             _library.Save();
@@ -318,26 +510,31 @@ namespace LibraryEditor
 
             try
             {
-                ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = 8 };
-                Parallel.For(0, OpenWeMadeDialog.FileNames.Length, options, i =>
+                Task.Factory.StartNew(() =>
+                {
+                    ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = 8 };
+                    Parallel.For(0, OpenWeMadeDialog.FileNames.Length, options, i =>
                             {
-                                if (Path.GetExtension(OpenWeMadeDialog.FileNames[i]) == ".wtl")
+                                var fileName = OpenWeMadeDialog.FileNames[i];
+                                var ext = Path.GetExtension(fileName).ToUpper();
+                                if (ext == ".WTL")
                                 {
-                                    WTLLibrary WTLlib = new WTLLibrary(OpenWeMadeDialog.FileNames[i]);
+                                    WTLLibrary WTLlib = new WTLLibrary(fileName);
                                     WTLlib.ToMLibrary();
                                 }
-                                else if (Path.GetExtension(OpenWeMadeDialog.FileNames[i]) == ".Lib")
+                                else if (ext == ".LIB")
                                 {
-                                    MLibrary v1Lib = new MLibrary(OpenWeMadeDialog.FileNames[i]);
+                                    MLibraryV1 v1Lib = new MLibraryV1(fileName);
                                     v1Lib.ToMLibrary();
                                 }
                                 else
                                 {
-                                    WeMadeLibrary WILlib = new WeMadeLibrary(OpenWeMadeDialog.FileNames[i]);
+                                    WeMadeLibrary WILlib = new WeMadeLibrary(fileName);
                                     WILlib.ToMLibrary();
                                 }
-                                toolStripProgressBar.Value++;
+                                Invoke(new Action(() => { toolStripProgressBar.Value++; }));
                             });
+                });
             }
             catch (Exception ex)
             {
@@ -368,7 +565,7 @@ namespace LibraryEditor
             for (int i = 0; i < copyList.Count; i++)
             {
                 MLibraryV2.MImage image = _library.GetMImage(copyList[i]);
-                tempLibrary.AddImage(image.Image, image.MaskImage, image.X, image.Y);
+                tempLibrary.AddImage(image.Image, image.MaskImage, image.X, image.Y, checkboxRemoveBlackOnImport.Checked);
             }
 
             tempLibrary.Save();
@@ -419,52 +616,6 @@ namespace LibraryEditor
             MessageBox.Show(count.ToString());
         }
 
-        private void OffSetXTextBox_TextChanged(object sender, EventArgs e)
-        {
-            TextBox control = sender as TextBox;
-
-            if (control == null || !control.Focused) return;
-
-            short temp;
-
-            if (!short.TryParse(control.Text, out temp))
-            {
-                control.BackColor = Color.Red;
-                return;
-            }
-
-            control.BackColor = SystemColors.Window;
-
-            for (int i = 0; i < PreviewListView.SelectedIndices.Count; i++)
-            {
-                MLibraryV2.MImage image = _library.GetMImage(PreviewListView.SelectedIndices[i]);
-                image.X = temp;
-            }
-        }
-
-        private void OffSetYTextBox_TextChanged(object sender, EventArgs e)
-        {
-            TextBox control = sender as TextBox;
-
-            if (control == null || !control.Focused) return;
-
-            short temp;
-
-            if (!short.TryParse(control.Text, out temp))
-            {
-                control.BackColor = Color.Red;
-                return;
-            }
-
-            control.BackColor = SystemColors.Window;
-
-            for (int i = 0; i < PreviewListView.SelectedIndices.Count; i++)
-            {
-                MLibraryV2.MImage image = _library.GetMImage(PreviewListView.SelectedIndices[i]);
-                image.Y = temp;
-            }
-        }
-
         private void InsertImageButton_Click(object sender, EventArgs e)
         {
             if (_library == null) return;
@@ -512,7 +663,7 @@ namespace LibraryEditor
                         short.TryParse(placements[1], out y);
                 }
 
-                _library.InsertImage(index, image, x, y);
+                _library.InsertImage(index, image, x, y, checkboxRemoveBlackOnImport.Checked);
 
                 toolStripProgressBar.Value++;
             }
@@ -546,13 +697,13 @@ namespace LibraryEditor
                 foreach (string fileName in fileEntries)
                 {
                     if (Directory.Exists(outputDir) != true) Directory.CreateDirectory(outputDir);
-                    MLibraryv0 OldLibrary = new MLibraryv0(fileName);
+                    MLibraryV0 OldLibrary = new MLibraryV0(fileName);
                     MLibraryV2 NewLibrary = new MLibraryV2(outputDir + Path.GetFileName(fileName)) { Images = new List<MLibraryV2.MImage>(), IndexList = new List<int>(), Count = OldLibrary.Images.Count }; ;
                     for (int i = 0; i < OldLibrary.Images.Count; i++)
                         NewLibrary.Images.Add(null);
                     for (int j = 0; j < OldLibrary.Images.Count; j++)
                     {
-                        MLibraryv0.MImage oldimage = OldLibrary.GetMImage(j);
+                        MLibraryV0.MImage oldimage = OldLibrary.GetMImage(j);
                         NewLibrary.Images[j] = new MLibraryV2.MImage(oldimage.FBytes, oldimage.Width, oldimage.Height) { X = oldimage.X, Y = oldimage.Y };
                     }
                     NewLibrary.Save();
@@ -743,13 +894,21 @@ namespace LibraryEditor
 
             ImageList.Images.Clear();
             _indexList.Clear();
-            _library.ReplaceImage(PreviewListView.SelectedIndices[0], newBmp, 0, 0);
+            _library.ReplaceImage(PreviewListView.SelectedIndices[0], newBmp, 0, 0, checkboxRemoveBlackOnImport.Checked);
             PreviewListView.VirtualListSize = _library.Images.Count;
 
             try
             {
                 PreviewListView.RedrawItems(0, PreviewListView.Items.Count - 1, true);
-                ImageBox.Image = _library.Images[PreviewListView.SelectedIndices[0]].Image;
+
+                if (ViewMode == "Image")
+                {
+                    ImageBox.Image = _library.Images[PreviewListView.SelectedIndices[0]].Image;
+                }
+                else
+                {
+                    ImageBox.Image = _library.Images[PreviewListView.SelectedIndices[0]].MaskImage;
+                }
             }
             catch (Exception)
             {
@@ -810,6 +969,8 @@ namespace LibraryEditor
         // Move Left and Right through images.
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (!ImageTabActive) return false;
+
             if (keyData == Keys.Left)
             {
                 previousImageToolStripMenuItem_Click(null, null);
@@ -897,6 +1058,381 @@ namespace LibraryEditor
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
+        }
+
+        #region Frames
+
+        private void defaultMonsterFramesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _library.Frames.Clear();
+            _library.Frames = new FrameSet(FrameSet.DefaultMonsterFrameSet);
+
+            UpdateFrameGridView();
+        }
+
+        private void defaultNPCFramesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _library.Frames.Clear();
+            _library.Frames = new FrameSet(FrameSet.DefaultNPCFrameSet);
+
+            UpdateFrameGridView();
+        }
+
+        private void defaultPlayerFramesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (tabControl.SelectedIndex)
+            {
+                case 0: //Images
+                    ImageTabActive = true;
+                    MaskTabActive = false;
+                    FrameTabActive = false;
+                    ImageBox.Location = new Point(0, 0);
+                    FrameAnimTimer.Stop();
+                    break;
+                case 1: //Masks
+                    ImageTabActive = false;
+                    MaskTabActive = true;
+                    FrameTabActive = false;
+                    ImageBox.Location = new Point(0, 0);
+                    FrameAnimTimer.Stop();
+                    break;
+                case 2: //Frames
+                    ImageTabActive = false;
+                    MaskTabActive = false;
+                    FrameTabActive = true;
+                    break;
+            }
+        }
+
+        private void autofillNpcFramesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (FolderLibraryDialog.ShowDialog() != DialogResult.OK) return;
+
+            var path = FolderLibraryDialog.SelectedPath;
+
+            var files = Directory.GetFiles(path, "*.Lib");
+
+            if (MessageBox.Show($"Are you sure you want to populate {files.Count()} Libs with their matching FrameSet?",
+                "Autofill Libs.",
+                MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+
+            foreach (var file in files)
+            {
+                if (_library != null) _library.Close();
+                _library = new MLibraryV2(file);
+
+                // Show .Lib path in application title.
+                this.Text = file;
+
+                var name = Path.GetFileNameWithoutExtension(file);
+
+                if (!int.TryParse(name, out int imageNumber)) continue;
+
+                _library.Frames = GetFrameSetByImage((Monster)imageNumber);
+                _library.Save();
+            }
+        }
+
+        private void frameGridView_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            frameGridView.Rows[e.RowIndex].ErrorText = "";
+
+            if (frameGridView.Rows[e.RowIndex].IsNewRow) { return; }
+
+            if (e.ColumnIndex >= 1 && e.ColumnIndex <= 8)
+            {
+                if (!int.TryParse(e.FormattedValue.ToString(), out _))
+                {
+                    e.Cancel = true;
+                    frameGridView.Rows[e.RowIndex].ErrorText = "the value must be an integer";
+                }
+            }
+        }
+
+        private void frameGridView_DefaultValuesNeeded(object sender, DataGridViewRowEventArgs e)
+        {
+            e.Row.Cells["FrameStart"].Value = 0;
+            e.Row.Cells["FrameCount"].Value = 0;
+            e.Row.Cells["FrameSkip"].Value = 0;
+            e.Row.Cells["FrameInterval"].Value = 0;
+            e.Row.Cells["FrameEffectStart"].Value = 0;
+            e.Row.Cells["FrameEffectCount"].Value = 0;
+            e.Row.Cells["FrameEffectSkip"].Value = 0;
+            e.Row.Cells["FrameEffectInterval"].Value = 0;
+            e.Row.Cells["FrameReverse"].Value = false;
+            e.Row.Cells["FrameBlend"].Value = false;
+        }
+
+
+        private void UpdateFrameGridView()
+        {
+            frameGridView.Rows.Clear();
+
+            foreach (var action in _library.Frames.Keys)
+            {
+                var frame = _library.Frames[action];
+
+                int rowIndex = frameGridView.Rows.Add();
+
+                var row = frameGridView.Rows[rowIndex];
+
+                row.Cells["FrameAction"].Value = action;
+                row.Cells["FrameStart"].Value = frame.Start;
+                row.Cells["FrameCount"].Value = frame.Count;
+                row.Cells["FrameSkip"].Value = frame.Skip;
+                row.Cells["FrameInterval"].Value = frame.Interval;
+                row.Cells["FrameEffectStart"].Value = frame.EffectStart;
+                row.Cells["FrameEffectCount"].Value = frame.EffectCount;
+                row.Cells["FrameEffectSkip"].Value = frame.EffectSkip;
+                row.Cells["FrameEffectInterval"].Value = frame.EffectInterval;
+                row.Cells["FrameReverse"].Value = frame.Reverse;
+                row.Cells["FrameBlend"].Value = frame.Blend;
+            }
+        }
+
+        private void UpdateFrameGridData()
+        {
+            if (_library == null) return;
+
+            _library.Frames.Clear();
+
+            foreach (DataGridViewRow row in frameGridView.Rows)
+            {
+                var cells = row.Cells;
+
+                if (cells["FrameAction"].Value == null) continue;
+
+                var action = (MirAction)row.Cells["FrameAction"].Value;
+
+                if (_library.Frames.ContainsKey(action))
+                {
+                    MessageBox.Show(string.Format($"The action '{action}' exists more than once so will not be saved."));
+                    continue;
+                }
+
+                var frame = new Frame(cells["FrameStart"].Value.ValueOrDefault<int>(),
+                                        cells["FrameCount"].Value.ValueOrDefault<int>(),
+                                        cells["FrameSkip"].Value.ValueOrDefault<int>(),
+                                        cells["FrameInterval"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectStart"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectCount"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectSkip"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectInterval"].Value.ValueOrDefault<int>())
+                {
+                    Reverse = cells["FrameReverse"].Value.ValueOrDefault<bool>(),
+                    Blend = cells["FrameBlend"].Value.ValueOrDefault<bool>()
+                };
+
+                _library.Frames.Add(action, frame);
+            }
+        }
+
+        private void frameGridView_RowEnter(object sender, DataGridViewCellEventArgs e)
+        {
+            var row = frameGridView.Rows[e.RowIndex];
+
+            if (row == null) return;
+
+            var cells = row.Cells;
+
+            if (cells["FrameAction"].Value == null) return;
+
+            var frame = new Frame(cells["FrameStart"].Value.ValueOrDefault<int>(),
+                                        cells["FrameCount"].Value.ValueOrDefault<int>(),
+                                        cells["FrameSkip"].Value.ValueOrDefault<int>(),
+                                        cells["FrameInterval"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectStart"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectCount"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectSkip"].Value.ValueOrDefault<int>(),
+                                        cells["FrameEffectInterval"].Value.ValueOrDefault<int>())
+            {
+                Reverse = cells["FrameReverse"].Value.ValueOrDefault<bool>(),
+                Blend = cells["FrameBlend"].Value.ValueOrDefault<bool>()
+            };
+
+            if (frame.Interval == 0) return;
+
+            _drawFrame = frame;
+
+            FrameAnimTimer.Interval = frame.Interval;
+            FrameAnimTimer.Start();
+        }
+
+        private Frame _drawFrame;
+        private int _currentFrame;
+        private MirDirection _currentDirection;
+
+        private void FrameAnimTimer_Tick(object sender, EventArgs e)
+        {
+            if (_drawFrame == null) return;
+
+            try
+            {
+                if (_currentFrame >= _drawFrame.Count - 1)
+                {
+                    _currentFrame = 0;
+                    MirDirection[] arr = (MirDirection[])Enum.GetValues(typeof(MirDirection));
+                    int j = Array.IndexOf<MirDirection>(arr, _currentDirection) + 1;
+                    _currentDirection = (arr.Length == j) ? arr[0] : arr[j];
+                }
+
+                var drawFrame = _drawFrame.Start + (_drawFrame.OffSet * (byte)_currentDirection) + _currentFrame;
+
+                _selectedImage = _library.GetMImage(drawFrame);
+
+                if (ViewMode == "Image")
+                {
+                    ImageBox.Location = new Point(250 + _selectedImage.X, 250 + _selectedImage.Y);
+                    ImageBox.Image = _selectedImage.Image;
+                }
+                else
+                {
+                    ImageBox.Location = new Point(250 + _selectedImage.X, 250 + _selectedImage.Y);
+                    ImageBox.Image = _selectedImage.MaskImage;
+                }
+
+                _currentFrame++;
+            }
+            catch { }
+        }
+
+        private void PreviewListViewMask_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void RButtonViewMode_CheckedChanged(object sender, EventArgs e)
+        {
+            if (RButtonImage.Checked)
+            {
+                ViewMode = "Image";
+            }
+            else if (RButtonOverlay.Checked)
+            {
+                ViewMode = "Overlay";
+            }
+
+            if (_selectedImage != null)
+            {
+                if (ViewMode == "Image")
+                {
+                    ImageBox.Image = _selectedImage.Image;
+                }
+                else
+                {
+                    ImageBox.Image = _selectedImage.MaskImage;
+                }
+            }
+        }
+
+        /// <summary>
+        /// List of monsters and matching frames
+        /// Method MUST be edited before use. The existing code is only here as an example.
+        /// READ THE COMMENTS WITHIN THIS METHOD BEFORE USE
+        /// </summary>
+        /// <param name="image"></param>
+        /// <returns></returns>
+        private FrameSet GetFrameSetByImage(Monster image)
+        {
+            //REMOVE THE BELOW EXCEPTION ONCE THE DESIRED CODE HAS BEEN ADDED          
+            throw new NotImplementedException("The method 'GetFrameSetByImage' must be updated before this function can be used");
+
+            //UNCOMMENT THE CODE BELOW, IT SERVES AS AN EXAMPLE OF HOW TO MATCH IMAGES UP TO THE CORRECT FRAMES
+            //List<FrameSet> FrameList = new List<FrameSet>();
+            //FrameSet frame;
+
+            ////ADD LIST OF FRAMES (CAN BE COPIED FROM THE CLIENTS FRAME.CS)
+            //FrameList.Add(frame = new FrameSet());
+            //frame.Add(MirAction.Standing, new Frame(0, 4, 0, 450));
+            //frame.Add(MirAction.Harvest, new Frame(12, 10, 0, 200));
+
+            ////ADD SWITCH OF IMAGE TO CORRECT FRAME (CAN BE COPIED FROM THE MONSTEROBJECT.CS FRAME LIST)
+            //FrameSet matchingFrame = new FrameSet();
+            //switch (image)
+            //{
+            //    case Monster.Hen:
+            //        matchingFrame = FrameList[0];
+            //        break;
+            //}
+
+            //return matchingFrame;
+        }
+        #endregion
+
+        private void openReferenceFileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (OpenLibraryDialog.ShowDialog() != DialogResult.OK) return;
+
+            OpenReferenceLibrary(OpenLibraryDialog.FileName);
+            PreviewListView.Invoke(new EventHandler(PreviewListView_SelectedIndexChanged), EventArgs.Empty);
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            PreviewListView.Invoke(new EventHandler(PreviewListView_SelectedIndexChanged), EventArgs.Empty);
+        }
+
+        private void importShadowsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (OpenLibraryDialog.ShowDialog() != DialogResult.OK) return;
+            OpenShadowLibraryAndImport(OpenLibraryDialog.FileName);
+        }
+
+        private void openReferenceImageToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_library == null) return;
+            if (_library.FileName == null) return;
+
+            if (ImportImageDialog.ShowDialog() != DialogResult.OK) return;
+
+            string fileName = ImportImageDialog.FileNames[0];
+            _referenceImage = new Bitmap(fileName);
+        }
+
+        private void BulkButton_Click(object sender, EventArgs e)
+        {
+            // Create an instance of the InputDialog class
+            InputDialog dlg = new InputDialog();
+
+            // Show the dialog as a modal dialog
+            DialogResult result = dlg.ShowDialog();
+
+            // If the user clicked the Ok button, retrieve the values entered by the user
+            if (result == DialogResult.OK)
+            {
+                for (int i = 0; i < PreviewListView.SelectedIndices.Count; i++)
+                {
+                    MLibraryV2.MImage image = _library.GetMImage(PreviewListView.SelectedIndices[i]);
+                    if (image == null || image.Image == null) continue;
+                    image.X += (short)dlg.Value1;
+                    image.Y += (short)dlg.Value2;
+                }
+            }
+        }
+
+        private void numericUpDownX_ValueChanged(object sender, EventArgs e)
+        {
+            for (int i = 0; i < PreviewListView.SelectedIndices.Count; i++)
+            {
+                MLibraryV2.MImage image = _library.GetMImage(PreviewListView.SelectedIndices[i]);
+                image.X = (short)numericUpDownX.Value;
+            }
+            PreviewListView.Invoke(new EventHandler(PreviewListView_SelectedIndexChanged), EventArgs.Empty);
+        }
+
+        private void numericUpDownY_ValueChanged(object sender, EventArgs e)
+        {
+            for (int i = 0; i < PreviewListView.SelectedIndices.Count; i++)
+            {
+                MLibraryV2.MImage image = _library.GetMImage(PreviewListView.SelectedIndices[i]);
+                image.Y = (short)numericUpDownY.Value;
+            }
+            PreviewListView.Invoke(new EventHandler(PreviewListView_SelectedIndexChanged), EventArgs.Empty);
         }
     }
 }

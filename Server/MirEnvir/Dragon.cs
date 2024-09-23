@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirObjects;
 using Server.MirObjects.Monsters;
 
@@ -9,7 +7,7 @@ namespace Server.MirEnvir
 {
     public class Dragon
     {
-        private int ProcessDelay = 2000;
+        private readonly int ProcessDelay = 2000;
         public int DeLevelDelay = 60 * (60 * 1000);
         private long ProcessTime;
         public byte MaxLevel = Globals.MaxDragonLevel;
@@ -27,7 +25,7 @@ namespace Server.MirEnvir
             get { return MessageQueue.Instance; }
         }
 
-        private Point[] BodyLocations = new[]
+        private readonly Point[] BodyLocations = new[]
         {
             new Point(-3, -1),
             new Point(-3, -0),
@@ -90,9 +88,8 @@ namespace Server.MirEnvir
 
                 if (LinkedMonster.Spawn(map, Info.Location))
                 {
-                    if (LinkedMonster is EvilMir)
+                    if (LinkedMonster is EvilMir mob)
                     {
-                        EvilMir mob = (EvilMir)LinkedMonster;
                         if (mob != null)
                         {
                             mob.DragonLink = true;

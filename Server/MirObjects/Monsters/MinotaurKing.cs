@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-using Server.MirDatabase;
-using S = ServerPackets;
+﻿using Server.MirDatabase;
 
 namespace Server.MirObjects.Monsters
 {
-    class MinotaurKing : RightGuard
+    public class MinotaurKing : RightGuard
     {
         protected override byte AttackRange
         {

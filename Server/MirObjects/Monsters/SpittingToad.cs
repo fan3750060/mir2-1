@@ -1,6 +1,4 @@
-﻿using System;
-using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
@@ -112,7 +110,7 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
 
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
             Turn(Direction);
@@ -124,9 +122,6 @@ namespace Server.MirObjects.Monsters
 
             DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.MAC);
             ActionList.Add(action);
-
-            if (Target.Dead)
-                FindTarget();
         }
 
         public override void Spawned()
@@ -153,6 +148,7 @@ namespace Server.MirObjects.Monsters
                 Poison = CurrentPoison,
                 Hidden = Hidden,
                 Extra = Summoned,
+                Buffs = Buffs.Where(d => d.Info.Visible).Select(e => e.Type).ToList()
             };
         }
     }

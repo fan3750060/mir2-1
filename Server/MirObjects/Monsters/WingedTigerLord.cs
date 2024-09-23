@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class WingedTigerLord : MonsterObject
+    public class WingedTigerLord : MonsterObject
     {
         enum AttackType
         {
@@ -22,7 +18,8 @@ namespace Server.MirObjects.Monsters
 
         private int AttackRange = 5;
 
-        protected internal WingedTigerLord(MonsterInfo info) : base(info)
+        protected internal WingedTigerLord(MonsterInfo info) 
+            : base(info)
         {
         }
 
@@ -44,7 +41,11 @@ namespace Server.MirObjects.Monsters
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
             bool ranged = CurrentLocation == Target.CurrentLocation || !Functions.InRange(CurrentLocation, Target.CurrentLocation, 1);
 
-            int damage = 0;
+            ActionTime = Envir.Time + 500;
+            AttackTime = Envir.Time + AttackSpeed;
+            ShockTime = 0;
+
+            int damage;
 
             if (ranged)
             {
@@ -52,7 +53,7 @@ namespace Server.MirObjects.Monsters
                 {
                     Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 0, TargetID = Target.ObjectID });
 
-                    damage = GetAttackPower(MinDC, MaxDC);
+                    damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
 
                     List<MapObject> targets = FindAllTargets(1, Target.CurrentLocation);
 
@@ -68,9 +69,10 @@ namespace Server.MirObjects.Monsters
                     tornado = false;
                     return;
                 }
-            }
 
-            if (!ranged)
+                return;
+            }
+            else 
             {
                 if (stomp)
                 {
@@ -78,19 +80,17 @@ namespace Server.MirObjects.Monsters
                     Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 2 });
 
                     MirDirection dir = Functions.PreviousDir(Direction);
-                    Point tar;
-                    Cell cell;
-
-                    damage = GetAttackPower(MinDC, MaxDC);
+   
+                    damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
 
                     for (int i = 0; i < 8; i++)
                     {
-                        tar = Functions.PointMove(CurrentLocation, dir, 1);
+                        Point tar = Functions.PointMove(CurrentLocation, dir, 1);
                         dir = Functions.NextDir(dir);
 
                         if (!CurrentMap.ValidPoint(tar)) continue;
 
-                        cell = CurrentMap.GetCell(tar);
+                        Cell cell = CurrentMap.GetCell(tar);
 
                         if (cell.Objects == null) continue;
 
@@ -119,11 +119,11 @@ namespace Server.MirObjects.Monsters
                         //Slash
                         Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 0 });
 
-                        damage = GetAttackPower(MinDC, MaxDC);
+                        damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                         action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.ACAgility, AttackType.SingleSlash);
                         ActionList.Add(action);
 
-                        damage = GetAttackPower(MinDC, MaxDC);
+                        damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                         action = new DelayedAction(DelayedType.Damage, Envir.Time + 500, Target, damage, DefenceType.ACAgility, AttackType.SingleSlash);
                         ActionList.Add(action);
                         break;
@@ -131,7 +131,7 @@ namespace Server.MirObjects.Monsters
                         //Two hand slash
                         Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 1 });
 
-                        damage = GetAttackPower(MinDC, MaxDC);
+                        damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                         action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.ACAgility, AttackType.SingleSlash);
                         ActionList.Add(action);
                         break;
@@ -143,10 +143,6 @@ namespace Server.MirObjects.Monsters
                 if (Envir.Random.Next(2) == 0)
                     tornado = true;
             }
-
-            ActionTime = Envir.Time + 500;
-            AttackTime = Envir.Time + AttackSpeed;
-            ShockTime = 0;
         }
 
         protected override void CompleteRangeAttack(IList<object> data)
@@ -157,18 +153,11 @@ namespace Server.MirObjects.Monsters
 
             if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
 
-            int poisonTime = GetAttackPower(MinSC, MaxSC);
+            int poisonTime = GetAttackPower(Stats[Stat.MinSC], Stats[Stat.MaxSC]);
 
             if (target.Attacked(this, damage, defence) <= 0) return;
 
-            if (Envir.Random.Next(Settings.PoisonResistWeight) >= target.PoisonResist)
-            {
-                if (Envir.Random.Next(2) == 0)
-                {
-                    target.ApplyPoison(new Poison { Owner = this, Duration = 5, PType = PoisonType.Stun, Value = poisonTime, TickSpeed = 2000 }, this);
-                    Broadcast(new S.ObjectEffect { ObjectID = target.ObjectID, Effect = SpellEffect.Stunned, Time = (uint)poisonTime * 1000 });
-                }
-            }
+            PoisonTarget(target, 2, poisonTime, PoisonType.Dazed, 2000);
         }
 
         protected override void CompleteAttack(IList<object> data)
@@ -180,24 +169,35 @@ namespace Server.MirObjects.Monsters
 
             if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
 
-            int poisonTime = GetAttackPower(MinSC, MaxSC);
-
             if (target.Attacked(this, damage, defence) <= 0) return;
 
             switch (type)
             {
                 case AttackType.Stomp:
                     {
-                        if (Envir.Random.Next(Settings.PoisonResistWeight) >= target.PoisonResist)
-                        {
-                            if (Envir.Random.Next(2) == 0)
-                            {
-                                target.ApplyPoison(new Poison { Owner = this, Duration = 5, PType = PoisonType.Paralysis, Value = poisonTime, TickSpeed = 2000 }, this);
-                            }
-                        }
+                        PoisonTarget(target, 2, 5, PoisonType.Paralysis, 2000);
                     }
                     break;
             }
+        }
+
+        protected override void ProcessTarget()
+        {
+            if (Target == null) return;
+
+            if (InAttackRange() && CanAttack)
+            {
+                Attack();
+                return;
+            }
+
+            if (Envir.Time < ShockTime)
+            {
+                Target = null;
+                return;
+            }
+
+            MoveTo(Target.CurrentLocation);
         }
     }
 }

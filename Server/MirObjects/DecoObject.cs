@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using Server.MirEnvir;
+﻿using Server.MirEnvir;
 using S = ServerPackets;
 
 namespace Server.MirObjects
 {
-    class DecoObject : MapObject
+    public sealed class DecoObject : MapObject
     {
         public override ObjectType Race
         {
@@ -28,13 +24,13 @@ namespace Server.MirObjects
             }
         }
 
-        public ushort Image;
+        public int Image;
 
-        public override uint Health
+        public override int Health
         {
             get { throw new NotSupportedException(); }
         }
-        public override uint MaxHealth
+        public override int MaxHealth
         {
             get { throw new NotSupportedException(); }
         }
@@ -86,8 +82,8 @@ namespace Server.MirObjects
 
             for (int i = 0; i < Buffs.Count; i++)
             {
-                if (Buffs[i].ExpireTime >= time && Buffs[i].ExpireTime > Envir.Time) continue;
-                time = Buffs[i].ExpireTime;
+                if (Buffs[i].NextTime >= time && Buffs[i].NextTime > Envir.Time) continue;
+                time = Buffs[i].NextTime;
             }
 
             if (OperateTime <= Envir.Time || time < OperateTime)
@@ -98,7 +94,7 @@ namespace Server.MirObjects
         {
             throw new NotSupportedException();
         }
-        public override bool IsAttackTarget(PlayerObject attacker)
+        public override bool IsAttackTarget(HumanObject attacker)
         {
             throw new NotSupportedException();
         }
@@ -106,7 +102,7 @@ namespace Server.MirObjects
         {
             throw new NotSupportedException();
         }
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             throw new NotSupportedException();
         }
@@ -119,7 +115,7 @@ namespace Server.MirObjects
         {
             throw new NotSupportedException();
         }
-        public override bool IsFriendlyTarget(PlayerObject ally)
+        public override bool IsFriendlyTarget(HumanObject ally)
         {
             throw new NotSupportedException();
         }
@@ -154,7 +150,7 @@ namespace Server.MirObjects
         {
             throw new NotSupportedException();
         }
-        public override void SendHealth(PlayerObject player)
+        public override void SendHealth(HumanObject player)
         {
             throw new NotSupportedException();
         }

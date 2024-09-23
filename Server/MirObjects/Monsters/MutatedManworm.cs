@@ -1,29 +1,26 @@
 using Server.MirDatabase;
 using Server.MirEnvir;
-using System.Collections.Generic;
-using System.Drawing;
-using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
     public class MutatedManworm : CrazyManworm
     {
-        public int AttackRange = 5;
+        public virtual byte TeleportEffect { get { return 4; } }
 
         protected internal MutatedManworm(MonsterInfo info)
             : base(info)
         {
         }
 
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             int attackerDamage = base.Attacked(attacker, damage, type, damageWeapon);
 
-            int ownDamage = GetAttackPower(MinDC, MaxDC);
+            int ownDamage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
 
             if (attackerDamage > ownDamage && Envir.Random.Next(2) == 0)
             {
-                TeleportToWeakerTarget();
+                FindWeakerTarget();
             }
 
             return attackerDamage;
@@ -33,47 +30,49 @@ namespace Server.MirObjects.Monsters
         {
             int attackerDamage = base.Attacked(attacker, damage, type);
 
-            int ownDamage = GetAttackPower(MinDC, MaxDC);
+            int ownDamage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
 
             if (attackerDamage > ownDamage && Envir.Random.Next(2) == 0)
             {
-                TeleportToWeakerTarget();
+                FindWeakerTarget();
             }
 
             return attackerDamage;
         }
 
-        private void TeleportToWeakerTarget()
+        private void FindWeakerTarget()
         {
-            List<MapObject> targets = FindAllTargets(AttackRange, CurrentLocation);
+            List<MapObject> targets = FindAllTargets(Info.ViewRange, CurrentLocation);
 
             if (targets.Count < 2) return;
 
+            var newTarget = Target;
+
             for (int i = 0; i < targets.Count; i++)
             {
-                if (targets[i].MinDC > Target.MinDC) continue;
+                if (targets[i].Stats[Stat.MinDC] >= Target.Stats[Stat.MinDC]) continue;
 
-                CurrentLocation = targets[i].CurrentLocation;
-                Target = targets[i];
+                newTarget = targets[i];
+            }
 
-                TeleportRandom(5, 2, CurrentMap);
-                break;
+            if (newTarget != Target)
+            {
+                Target = newTarget;
+                TeleportToTarget(Target);
             }
         }
 
-        public override bool TeleportRandom(int attempts, int distance, Map temp = null)
+        private bool TeleportToTarget(MapObject target)
         {
-            for (int i = 0; i < attempts; i++)
+            Direction = Functions.DirectionFromPoint(CurrentLocation, target.CurrentLocation);
+
+            var reverse = Functions.ReverseDirection(Direction);
+
+            var point = Functions.PointMove(target.CurrentLocation, reverse, 1);
+
+            if (point != CurrentLocation)
             {
-                Point location;
-
-                if (distance <= 0)
-                    location = new Point(Envir.Random.Next(CurrentMap.Width), Envir.Random.Next(CurrentMap.Height));
-                else
-                    location = new Point(CurrentLocation.X + Envir.Random.Next(-distance, distance + 1),
-                                         CurrentLocation.Y + Envir.Random.Next(-distance, distance + 1));
-
-                if (Teleport(CurrentMap, location, true, 4)) return true;
+                if (Teleport(CurrentMap, point, true, TeleportEffect)) return true;
             }
 
             return false;

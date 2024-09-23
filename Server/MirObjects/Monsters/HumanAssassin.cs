@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
-using Server.MirObjects.Monsters;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -25,35 +21,29 @@ namespace Server.MirObjects.Monsters
 
         protected override void RefreshBase()
         {
-            MaxHP = 1500;
-            MinAC = Master.MinAC;
-            MaxAC = Master.MaxAC;
-            MinMAC = Master.MinMAC;
-            MaxMAC = Master.MaxMAC;
-            MinDC = Master.MinDC;
-            MaxDC = Master.MaxDC;
-            MinMC = Master.MinMC;
-            MaxMC = Master.MaxMC;
-            MinSC = Master.MinSC;
-            MaxSC = Master.MaxSC;
-            Accuracy = Master.Accuracy;
-            Agility = Master.Agility;
+            if (Master != null)
+            {
+                Stats.Clear();
+                Stats.Add(Master.Stats);
 
-            MoveSpeed = 100;
-            AttackSpeed = Master.ASpeed;
+                Stats[Stat.HP] = 1500;
+
+                MoveSpeed = 100;
+                AttackSpeed = Master.AttackSpeed;
+            }
         }
 
         public override void RefreshAll()
         {
             RefreshBase();
 
-            MaxHP = (ushort)Math.Min(ushort.MaxValue, MaxHP + PetLevel * 20);
-            MinAC = (ushort)Math.Min(ushort.MaxValue, MinAC + PetLevel * 2);
-            MaxAC = (ushort)Math.Min(ushort.MaxValue, MaxAC + PetLevel * 2);
-            MinMAC = (ushort)Math.Min(ushort.MaxValue, MinMAC + PetLevel * 2);
-            MaxMAC = (ushort)Math.Min(ushort.MaxValue, MaxMAC + PetLevel * 2);
-            MinDC = (ushort)Math.Min(ushort.MaxValue, MinDC + PetLevel);
-            MaxDC = (ushort)Math.Min(ushort.MaxValue, MaxDC + PetLevel);
+            Stats[Stat.HP] += PetLevel * 20;
+            Stats[Stat.MinAC] += PetLevel * 2;
+            Stats[Stat.MaxAC] += PetLevel * 2;
+            Stats[Stat.MinMAC] += PetLevel * 2;
+            Stats[Stat.MaxMAC] += PetLevel * 2;
+            Stats[Stat.MinDC] += PetLevel;
+            Stats[Stat.MaxDC] += PetLevel;
 
             if (MoveSpeed < 100) MoveSpeed = 100;
             if (AttackSpeed < 100) AttackSpeed = 100;
@@ -109,17 +99,8 @@ namespace Server.MirObjects.Monsters
 
             if (Hidden)
             {
-                Hidden = false;
-
-                for (int i = 0; i < Buffs.Count; i++)
-                {
-                    if (Buffs[i].Type != BuffType.Hiding) continue;
-
-                    Buffs[i].ExpireTime = 0;
-                    break;
-                }
+                RemoveBuff(BuffType.Hiding);
             }
-
 
             CellTime = Envir.Time + 500;
             ActionTime = Envir.Time + 300;
@@ -268,12 +249,13 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             AttackDamage += damage;
 
             if (damage == 0) return;
 
-            Target.Attacked(this, damage);
+            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.ACAgility);
+            ActionList.Add(action);
         }
 
         public override void Spawned()
@@ -287,7 +269,7 @@ namespace Server.MirObjects.Monsters
         {
             if (Dead) return;
 
-            explosionDie();
+            ExplosionDie();
 
             HP = 0;
             Dead = true;
@@ -297,20 +279,24 @@ namespace Server.MirObjects.Monsters
 
             Broadcast(new S.ObjectDied { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = (byte)2 });
 
-            if (EXPOwner != null && Master == null && EXPOwner.Race == ObjectType.Player) EXPOwner.WinExp(Experience);
+            if (EXPOwner != null && EXPOwner.Node != null && Master == null && EXPOwner.Race == ObjectType.Player) EXPOwner.WinExp(Experience);
 
             if (Respawn != null)
                 Respawn.Count--;
 
+            Master = null;
+
             PoisonList.Clear();
             Envir.MonsterCount--;
-            CurrentMap.MonsterCount--;
+
+            if (CurrentMap != null)
+                CurrentMap.MonsterCount--;
         }
 
-        private void explosionDie()
+        private void ExplosionDie()
         {
-            int criticalDamage = Envir.Random.Next(0, 100) <= Accuracy ? MaxDC * 2 : MinDC * 2;
-            int damage = (MinDC / 5 + 4 * (Level / 20)) * criticalDamage / 20 + MaxDC;
+            int criticalDamage = Envir.Random.Next(0, 100) <= Stats[Stat.Accuracy] ? Stats[Stat.MaxDC] * 2 : Stats[Stat.MinDC] * 2;
+            int damage = (Stats[Stat.MinDC] / 5 + 4 * (Level / 20)) * criticalDamage / 20 + Stats[Stat.MaxDC];
 
             for (int i = 0; i < 16; i++)
             {
@@ -348,13 +334,16 @@ namespace Server.MirObjects.Monsters
             short weapon = -1;
             short armour = 0;
             byte wing = 0;
-            if (Master != null && Master is PlayerObject) master = (PlayerObject)Master;
+            if (Master != null && Master is PlayerObject) 
+                master = (PlayerObject)Master;
+
             if (master != null)
             {
                 weapon = master.Looks_Weapon;
                 armour = master.Looks_Armour;
                 wing = master.Looks_Wings;
             }
+
             return new S.ObjectPlayer
             {
                 ObjectID = ObjectID,

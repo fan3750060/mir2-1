@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Concurrent;
 using System.Net.Sockets;
 using Client.MirControls;
 using C = ClientPackets;
@@ -13,34 +10,62 @@ namespace Client.MirNetwork
     {
         private static TcpClient _client;
         public static int ConnectAttempt = 0;
+        public static int MaxAttempts = 20;
+        public static bool ErrorShown;
         public static bool Connected;
-        public static long TimeOutTime, TimeConnected;
+        public static long TimeOutTime, TimeConnected, RetryTime = CMain.Time + 5000;
 
         private static ConcurrentQueue<Packet> _receiveList;
         private static ConcurrentQueue<Packet> _sendList;
 
         static byte[] _rawData = new byte[0];
-
+        static readonly byte[] _rawBytes = new byte[8 * 1024];
 
         public static void Connect()
         {
             if (_client != null)
                 Disconnect();
 
+            if (ConnectAttempt >= MaxAttempts)
+            {
+                if (ErrorShown)
+                {
+                    return;
+                }
+
+                ErrorShown = true;
+
+                MirMessageBox errorBox = new("Error Connecting to Server", MirMessageBoxButtons.Cancel);
+                errorBox.CancelButton.Click += (o, e) => Program.Form.Close();
+                errorBox.Label.Text = $"Maximum Connection Attempts Reached: {MaxAttempts}" +
+                                      $"{Environment.NewLine}Please try again later or check your connection settings.";
+                errorBox.Show();
+                return;
+            }
+
             ConnectAttempt++;
 
-            _client = new TcpClient {NoDelay = true};
-            _client.BeginConnect(Settings.IPAddress, Settings.Port, Connection, null);
-
+            try
+            {
+                _client = new TcpClient { NoDelay = true };
+                _client?.BeginConnect(Settings.IPAddress, Settings.Port, Connection, null);
+            }
+            catch (ObjectDisposedException ex)
+            {
+                if (Settings.LogErrors) CMain.SaveError(ex.ToString());
+                Disconnect();
+            }
         }
 
         private static void Connection(IAsyncResult result)
         {
             try
             {
-                _client.EndConnect(result);
+                _client?.EndConnect(result);
 
-                if (!_client.Connected)
+                if ((_client != null &&
+                    !_client.Connected) ||
+                    _client == null)
                 {
                     Connect();
                     return;
@@ -53,11 +78,11 @@ namespace Client.MirNetwork
                 TimeOutTime = CMain.Time + Settings.TimeOut;
                 TimeConnected = CMain.Time;
 
-
                 BeginReceive();
             }
             catch (SocketException)
             {
+                Thread.Sleep(100);
                 Connect();
             }
             catch (Exception ex)
@@ -71,11 +96,9 @@ namespace Client.MirNetwork
         {
             if (_client == null || !_client.Connected) return;
 
-            byte[] rawBytes = new byte[8 * 1024];
-
             try
             {
-                _client.Client.BeginReceive(rawBytes, 0, rawBytes.Length, SocketFlags.None, ReceiveData, rawBytes);
+                _client.Client.BeginReceive(_rawBytes, 0, _rawBytes.Length, SocketFlags.None, ReceiveData, _rawBytes);
             }
             catch
             {
@@ -111,8 +134,15 @@ namespace Client.MirNetwork
             Buffer.BlockCopy(rawBytes, 0, _rawData, temp.Length, dataRead);
 
             Packet p;
+            List<byte> data = new List<byte>();
+
             while ((p = Packet.ReceivePacket(_rawData, out _rawData)) != null)
+            {
+                data.AddRange(p.GetPacketBytes());
                 _receiveList.Enqueue(p);
+            }
+
+            CMain.BytesReceived += data.Count;
 
             BeginReceive();
         }
@@ -140,12 +170,11 @@ namespace Client.MirNetwork
             { }
         }
 
-
         public static void Disconnect()
         {
             if (_client == null) return;
 
-            _client.Close();
+            _client?.Close();
 
             TimeConnected = 0;
             Connected = false;
@@ -163,9 +192,7 @@ namespace Client.MirNetwork
                 {
                     while (_receiveList != null && !_receiveList.IsEmpty)
                     {
-                        Packet p;
-
-                        if (!_receiveList.TryDequeue(out p) || p == null) continue;
+                        if (!_receiveList.TryDequeue(out Packet p) || p == null) continue;
                         if (!(p is ServerPackets.Disconnect) && !(p is ServerPackets.ClientVersion)) continue;
 
                         MirScene.ActiveScene.ProcessPacket(p);
@@ -176,6 +203,11 @@ namespace Client.MirNetwork
                     MirMessageBox.Show("Lost connection with the server.", true);
                     Disconnect();
                     return;
+                }
+                else if (CMain.Time >= RetryTime)
+                {
+                    RetryTime = CMain.Time + 5000;
+                    Connect();
                 }
                 return;
             }
@@ -191,8 +223,7 @@ namespace Client.MirNetwork
 
             while (_receiveList != null && !_receiveList.IsEmpty)
             {
-                Packet p;
-                if (!_receiveList.TryDequeue(out p) || p == null) continue;
+                if (!_receiveList.TryDequeue(out Packet p) || p == null) continue;
                 MirScene.ActiveScene.ProcessPacket(p);
             }
 
@@ -207,13 +238,11 @@ namespace Client.MirNetwork
             List<byte> data = new List<byte>();
             while (!_sendList.IsEmpty)
             {
-                Packet p;
-                if (!_sendList.TryDequeue(out p)) continue;
+                if (!_sendList.TryDequeue(out Packet p)) continue;
                 data.AddRange(p.GetPacketBytes());
             }
 
-
-
+            CMain.BytesSent += data.Count;
 
             BeginSend(data);
         }

@@ -1,6 +1,5 @@
-﻿using System;
 using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
@@ -23,13 +22,11 @@ namespace Server.MirObjects.Monsters
 
             if (x > 3 || y > 3) return false;
 
-
             return (x == 0) || (y == 0) || (x == y);
         }
 
         protected override void Attack()
         {
-
             if (!Target.IsAttackTarget(this))
             {
                 Target = null;
@@ -42,83 +39,61 @@ namespace Server.MirObjects.Monsters
             if (!ranged) base.Attack();
             else
             {
-                Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 1 });
-                LineAttack(3);
-
                 ActionTime = Envir.Time + 300;
                 AttackTime = Envir.Time + AttackSpeed;
                 ShockTime = 0;
+
+                Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 1 });
+
+                int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
+                if (damage == 0) return;
+
+                LineAttack(damage, 3, 300, DefenceType.MACAgility);
             }
         }
 
-        private void LineAttack(int distance)
+        protected override void CompleteAttack(IList<object> data)
         {
+            MapObject target = (MapObject)data[0];
+            int damage = (int)data[1];
+            DefenceType defence = (DefenceType)data[2];
+            bool attack = data.Count < 4 || (bool)data[3];
 
-            int damage = GetAttackPower(MinDC, MaxDC);
-            if (damage == 0) return;
+            if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
 
+            if (!attack || target.Attacked(this, damage, defence) <= 0) return;
+
+            PoisonTarget(target, 8, 5, PoisonType.Green, 2000);
+        }
+
+        protected override void LineAttack(int damage, int distance, int additionalDelay = 500, DefenceType defenceType = DefenceType.ACAgility, bool push = false)
+        {
             for (int i = 1; i <= distance; i++)
             {
                 Point target = Functions.PointMove(CurrentLocation, Direction, i);
 
-                if (target == Target.CurrentLocation)
-                {
-                    if (Envir.Random.Next(Settings.MagicResistWeight) >= Target.MagicResist)
-                    {
-                        if (Target.Attacked(this, damage, DefenceType.MACAgility) > 0 && Envir.Random.Next(8) == 0)
-                        {
-                            if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                            {
-                                int poison = GetAttackPower(MinSC, MaxSC);
+                if (!CurrentMap.ValidPoint(target)) continue;
 
-                                Target.ApplyPoison(new Poison
-                                {
-                                    Owner = this,
-                                    Duration = 5,
-                                    PType = PoisonType.Green,
-                                    Value = poison,
-                                    TickSpeed = 2000
-                                }, this);
-                            }
+                Cell cell = CurrentMap.GetCell(target);
+                if (cell.Objects == null) continue;
+
+                for (int o = 0; o < cell.Objects.Count; o++)
+                {
+                    MapObject ob = cell.Objects[o];
+                    if (ob.Race == ObjectType.Monster || ob.Race == ObjectType.Player)
+                    {
+                        if (!ob.IsAttackTarget(this)) continue;
+
+                        if (Envir.Random.Next(Settings.MagicResistWeight) >= ob.Stats[Stat.MagicResist])
+                        {
+                            int delay = Functions.MaxDistance(CurrentLocation, ob.CurrentLocation) * 50 + additionalDelay; //50 MS per Step
+                            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, ob, damage, defenceType, true);
+                            ActionList.Add(action);
                         }
                     }
-                }
-                else
-                {
-                    if (!CurrentMap.ValidPoint(target)) continue;
+                    else continue;
 
-                    Cell cell = CurrentMap.GetCell(target);
-                    if (cell.Objects == null) continue;
-
-                    for (int o = 0; o < cell.Objects.Count; o++)
-                    {
-                        MapObject ob = cell.Objects[o];
-                        if (ob.Race == ObjectType.Monster || ob.Race == ObjectType.Player)
-                        {
-                            if (!ob.IsAttackTarget(this)) continue;
-                            if (Envir.Random.Next(Settings.MagicResistWeight) < ob.MagicResist) continue;
-                            if (ob.Attacked(this, damage, DefenceType.MACAgility) > 0 && Envir.Random.Next(8) == 0)
-                            {
-                                if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                                {
-                                    int poison = GetAttackPower(MinSC, MaxSC);
-
-                                    ob.ApplyPoison(new Poison
-                                    {
-                                        Owner = this,
-                                        Duration = 5,
-                                        PType = PoisonType.Green,
-                                        Value = poison,
-                                        TickSpeed = 2000
-                                    }, this);
-                                }
-                            }
-                        }
-                        else continue;
-
-                        break;
-                    }
-
+                    break;
                 }
             }
         }

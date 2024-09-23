@@ -1,5 +1,5 @@
-﻿using System.Drawing;
-using Server.MirDatabase;
+using System.Drawing;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 
 namespace Server.MirObjects.Monsters
@@ -62,9 +62,9 @@ namespace Server.MirObjects.Monsters
             }
 
 
-            if (MaxHP >= 7)
+            if (Stats[Stat.HP] >= 7)
             {
-                byte stage = (byte)(HP / (MaxHP / 7));
+                byte stage = (byte)(HP / (Stats[Stat.HP] / 7));
 
                 if (stage < _stage)
                 {

@@ -3,7 +3,7 @@ using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class FrostTiger : MonsterObject
+    public class FrostTiger : MonsterObject
     {
         protected byte AttackRange = 6;
         public long SitDownTime;
@@ -25,7 +25,6 @@ namespace Server.MirObjects.Monsters
                 Hidden = value;
                 CurrentMap.Broadcast(new S.ObjectSitDown { ObjectID = ObjectID, Location = CurrentLocation, Direction = Direction, Sitting = value }, CurrentLocation);
             }
-
         }
 
         protected override bool CanAttack
@@ -35,6 +34,7 @@ namespace Server.MirObjects.Monsters
                 return !Sitting && base.CanAttack;
             }
         }
+
         protected override bool CanMove
         {
             get
@@ -42,6 +42,7 @@ namespace Server.MirObjects.Monsters
                 return !Sitting && base.CanMove;
             }
         }
+
         public override bool Walk(MirDirection dir)
         {
             return !Sitting && base.Walk(dir);
@@ -62,7 +63,6 @@ namespace Server.MirObjects.Monsters
 
         protected override void Attack()
         {
-
             if (!Target.IsAttackTarget(this))
             {
                 Target = null;
@@ -77,13 +77,14 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (!ranged)
             {
                 Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
                 if (damage == 0) return;
 
-                Target.Attacked(this, damage, DefenceType.ACAgility);
+                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.ACAgility);
+                ActionList.Add(action);
             }
             else
             {
@@ -93,10 +94,10 @@ namespace Server.MirObjects.Monsters
 
                 int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
 
-                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, Target, damage, DefenceType.MAC);
+                DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.MAC);
                 ActionList.Add(action);
 
-                if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
+                if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.Stats[Stat.PoisonResist])
                 {
                     if (Envir.Random.Next(8) == 0)
                     {
@@ -178,6 +179,7 @@ namespace Server.MirObjects.Monsters
                 Poison = CurrentPoison,
                 Hidden = Hidden,
                 Extra = Sitting,
+                Buffs = Buffs.Where(d => d.Info.Visible).Select(e => e.Type).ToList()
             };
         }
     }

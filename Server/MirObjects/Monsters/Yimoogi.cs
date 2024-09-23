@@ -1,12 +1,11 @@
-﻿using System;
 using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class Yimoogi : MonsterObject
+    public class Yimoogi : MonsterObject
     {
         protected byte AttackRange = 7;
         protected byte PoisonAttackRange = 4;
@@ -67,7 +66,6 @@ namespace Server.MirObjects.Monsters
 
         protected override void Attack()
         {
-
             if (!Target.IsAttackTarget(this) || NoAttack)
             {
                 Target = null;
@@ -82,13 +80,14 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (!ranged && Envir.Random.Next(5) > 0)
             {
                 Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
                 if (damage == 0) return;
 
-                Target.Attacked(this, damage, DefenceType.MACAgility);
+                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.MACAgility);
+                ActionList.Add(action);
             }
             else
             {
@@ -99,29 +98,17 @@ namespace Server.MirObjects.Monsters
                 {
                     Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 1 });
 
-                    if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                    {
-                        Target.ApplyPoison(new Poison
-                        {
-                            Owner = this,
-                            Duration = 6,
-                            PType = PoisonType.Red,
-                            TickSpeed = 2000
-                        }, this);
-                    }             
+                    //TODO - Delay this
+                    PoisonTarget(Target, 1, 6, PoisonType.Red, 2000);           
                 }
                 else
                 {
                     Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
 
-                    DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 500, Target, damage, DefenceType.MAC);
+                    DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + 500, Target, damage, DefenceType.MAC);
                     ActionList.Add(action);
                 }
             }
-
-
-            if (Target.Dead)
-                FindTarget();
 
         }
 
@@ -129,7 +116,7 @@ namespace Server.MirObjects.Monsters
         {
             if (Dead) return;
 
-            if (!IsChild && HP <= MaxHP / 10 && !FinalTeleport)
+            if (!IsChild && HP <= Stats[Stat.HP] / 10 && !FinalTeleport)
             {
                 Point teleportlocation = CurrentLocation;
                 if (TeleportRandom(40, 0))
@@ -196,7 +183,7 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            MonsterObject mob = GetMonster(Envir.GetMonsterInfo(Name));
+            MonsterObject mob = GetMonster(Envir.GetMonsterInfo(Info.Name));
 
             if (mob == null)
             {

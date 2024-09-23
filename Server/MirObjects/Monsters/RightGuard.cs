@@ -25,7 +25,6 @@ namespace Server.MirObjects.Monsters
 
         protected override void Attack()
         {
-
             if (!Target.IsAttackTarget(this))
             {
                 Target = null;
@@ -40,13 +39,14 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (!ranged)
             {
                 Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
                 if (damage == 0) return;
 
-                Target.Attacked(this, damage, DefenceType.MACAgility);
+                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.MACAgility);
+                ActionList.Add(action);
             }
             else
             {
@@ -54,15 +54,9 @@ namespace Server.MirObjects.Monsters
                 AttackTime = Envir.Time + AttackSpeed + 500;
                 if (damage == 0) return;
 
-
                 DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + 500, Target, damage, DefenceType.MAC);
                 ActionList.Add(action);
             }
-
-
-            if (Target.Dead)
-                FindTarget();
-
         }
 
         protected override void ProcessTarget()

@@ -1,6 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Windows.Forms;
+﻿using log4net;
+using System.Reflection;
 
 namespace Server.MirForms
 {
@@ -14,10 +13,12 @@ namespace Server.MirForms
         {
             Packet.IsServer = true;
 
+            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
+            log4net.Config.XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+
             try
             {
                 Settings.Load();
-                //Resource.Load();
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
@@ -27,8 +28,7 @@ namespace Server.MirForms
             }
             catch(Exception ex)
             {
-                File.AppendAllText(Settings.LogPath + "Error Log (" + DateTime.Now.Date.ToString("dd-MM-yyyy") + ").txt",
-                                           String.Format("[{0}]: {1}" + Environment.NewLine, DateTime.Now, ex.ToString()));
+                Logger.GetLogger().Error(ex);
             }
         }
     }

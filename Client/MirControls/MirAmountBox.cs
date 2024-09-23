@@ -1,7 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
-using Client.MirGraphics;
+﻿using Client.MirGraphics;
 using Client.MirSounds;
 
 namespace Client.MirControls
@@ -230,7 +227,7 @@ namespace Client.MirControls
             Libraries.Items.Draw(ImageIndex, x, y);
         }
 
-        public void Show()
+        public override void Show()
         {
             if (Parent != null) return;
 

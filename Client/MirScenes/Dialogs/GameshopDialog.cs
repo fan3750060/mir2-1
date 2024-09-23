@@ -1,15 +1,6 @@
 ﻿using Client.MirControls;
 using Client.MirGraphics;
-using Client.MirNetwork;
 using Client.MirSounds;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
 {
@@ -21,6 +12,7 @@ namespace Client.MirScenes.Dialogs
         public MirButton allItems, topItems, Deals, New;
         public MirButton CloseButton, PreviousButton, NextButton;
         public MirButton UpButton, DownButton, PositionBar;
+        public MirCheckBox PaymentTypeGold, PaymentTypeCredit;
 
 
         public GameShopCell[] Grid;
@@ -189,6 +181,33 @@ namespace Client.MirScenes.Dialogs
             {
                 GetCategories();
             };
+
+            PaymentTypeGold = new MirCheckBox
+            {
+                LabelText = "Buy with Gold",
+                Location = new Point(250, 449),
+                Parent = this,
+                Hint = "Buy item(s) with Gold.",
+                Index = 2086,
+                UnTickedIndex = 2086,
+                TickedIndex = 2087,
+                Library = Libraries.Prguse,
+                Checked = true
+            };
+            PaymentTypeGold.Click += PType_Clicked;
+
+            PaymentTypeCredit = new MirCheckBox
+            {
+                LabelText = "Buy with Credits",
+                Location = new Point(340, 449),
+                Parent = this,
+                Hint = "Buy item(s) with Credits.",
+                Index = 2086,
+                UnTickedIndex = 2086,
+                TickedIndex = 2087,
+                Library = Libraries.Prguse
+            };
+            PaymentTypeCredit.Click += PType_Clicked;
 
             allItems = new MirButton
             {
@@ -452,13 +471,37 @@ namespace Client.MirScenes.Dialogs
 
         }
 
-        public void Hide()
+        private void PType_Clicked(object sender, EventArgs e)
+        {
+            if (sender == PaymentTypeCredit)
+                RefreshPayType(0);
+            else if (sender == PaymentTypeGold)
+                RefreshPayType(1);
+        }
+
+        private void RefreshPayType(int idx)
+        {
+            switch (idx)
+            {
+                case 0: //  Credits
+                    PaymentTypeCredit.Checked = true;
+                    PaymentTypeGold.Checked = false;
+                    break;
+                case 1: //  Gold
+                    PaymentTypeGold.Checked = true;
+                    PaymentTypeCredit.Checked = false;
+                    break;
+            }
+        }
+
+
+        public override void Hide()
         {
             if (!Visible) return;
             Viewer.Visible = false;
             Visible = false;
         }
-        public void Show()
+        public override void Show()
         {
             if (Visible) return;
             Visible = true;
@@ -624,7 +667,7 @@ namespace Client.MirScenes.Dialogs
                 {
                     if (shopList[i].Class == ClassFilter || shopList[i].Class == "All" || ClassFilter == "Show All")
                     {
-                        if (SectionFilter == "Show All" || SectionFilter == "TopItems" && shopList[i].TopItem || SectionFilter == "DealItems" && shopList[i].Deal || SectionFilter == "NewItems" && shopList[i].Date > DateTime.Now.AddDays(-7))
+                        if (SectionFilter == "Show All" || SectionFilter == "TopItems" && shopList[i].TopItem || SectionFilter == "DealItems" && shopList[i].Deal || SectionFilter == "NewItems" && shopList[i].Date > CMain.Now.AddDays(-7))
                             CategoryList.Add(shopList[i].Category);
                     }
 
@@ -677,7 +720,7 @@ namespace Client.MirScenes.Dialogs
                 if (ShopList[i].Class == ClassFilter || ShopList[i].Class == "All" || ClassFilter == "Show All")
                     if (ShopList[i].Category == TypeFilter || TypeFilter == "Show All")
                     {
-                        if (SectionFilter == "Show All" || SectionFilter == "TopItems" && ShopList[i].TopItem || SectionFilter == "DealItems" && ShopList[i].Deal || SectionFilter == "NewItems" && ShopList[i].Date > DateTime.Now.AddDays(-7))
+                        if (SectionFilter == "Show All" || SectionFilter == "TopItems" && ShopList[i].TopItem || SectionFilter == "DealItems" && ShopList[i].Deal || SectionFilter == "NewItems" && ShopList[i].Date > CMain.Now.AddDays(-7))
                             filteredShop.Add(ShopList[i]);
                     }
             }

@@ -2,13 +2,6 @@
 using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirSounds;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
@@ -188,16 +181,6 @@ namespace Client.MirScenes.Dialogs
             Network.Enqueue(new C.TradeCancel());
         }
 
-        public void Hide()
-        {
-            Visible = false;
-        }
-
-        public void Show()
-        {
-            Visible = true;
-        }
-
         public MirItemCell GetCell(ulong id)
         {
             for (int i = 0; i < Grid.Length; i++)
@@ -292,17 +275,6 @@ namespace Client.MirScenes.Dialogs
             GuestGold = 0;
 
             Hide();
-        }
-
-
-        public void Hide()
-        {
-            Visible = false;
-        }
-
-        public void Show()
-        {
-            Visible = true;
         }
     }
 }

@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
@@ -10,42 +8,47 @@ namespace Server.MirObjects
     public class IntelligentCreatureObject : MonsterObject
     {
         public bool Summoned;
-        public string CustomName = "";
+        public string CustomName { get { return CreatureInfo.CustomName; } set { CreatureInfo.CustomName = value; } }
 
-        public IntelligentCreatureType petType = IntelligentCreatureType.None;
+        public UserIntelligentCreature CreatureInfo;
+
+        public IntelligentCreatureType PetType = IntelligentCreatureType.None;
 
         public ItemGrade GradeFilter = ItemGrade.None;
 
         public IntelligentCreatureRules CreatureRules = new IntelligentCreatureRules();
-        public IntelligentCreatureItemFilter ItemFilter = new IntelligentCreatureItemFilter();
-        public IntelligentCreaturePickupMode CurrentPickupMode = IntelligentCreaturePickupMode.SemiAutomatic;
+        public IntelligentCreatureItemFilter ItemFilter { get { return CreatureInfo.Filter; } set { CreatureInfo.Filter = value; } }
+
+        public IntelligentCreaturePickupMode CurrentPickupMode { get { return CreatureInfo.petMode; } set { CreatureInfo.petMode = value; } }
 
         public List<MapObject> TargetList = new List<MapObject>();
         public bool FillingTargetList = false;
         public bool DoTargetList = false;
         public bool TargetListTargetClean = false;
 
-        public int Fullness = 0;
-        public long fullnessTicker = 0;
-        public const long fullnessDelay = Settings.Second;
+        public int Fullness { get { return CreatureInfo.Fullness; } set { CreatureInfo.Fullness = value; } }
+        public long FullnessTicker = 0;
+        public const long FullnessDelay = Settings.Second;
 
-        public bool doDelayedPickup = false;
-        public long delayedpickupTicker = 0;
-        public const long delayedpickupDelay = Settings.Second;//1 second
+        public bool DoDelayedPickup = false;
+        public long DelayedpickupTicker = 0;
+        public const long DelayedpickupDelay = Settings.Second;//1 second
 
-        public long blackstoneTime = 0;
-        public const long blackstoneProduceTime = 10800;//3 hours in seconds
+        public long CreatureTime;
 
-        public long pearlTicker = 0;
-        public const long pearlProduceCount = 1000;//1000 items = 1 pearl
+        public long BlackstoneTime { get { return CreatureInfo.BlackstoneTime; } set { CreatureInfo.BlackstoneTime = value; } }
+        public const long BlackstoneProduceTime = 10800;//3 hours in seconds
 
-        public long animvariantTicker = 0;
-        public const long animvariantDelay = 10 * Settings.Second;//10 seconds
+        public long PearlTicker = 0;
+        public const long PearlProduceCount = 1000;//1000 items = 1 pearl
 
-        public long maintainfoodTime = 0;
+        public long AnimvariantTicker = 0;
+        public const long AnimvariantDelay = 10 * Settings.Second;//10 seconds
 
-        public long timedSayTicker = 0;
-        public const long timedSayDelay = 20 * Settings.Second;
+        public long MaintainfoodTime { get { return CreatureInfo.MaintainFoodTime; } set { CreatureInfo.MaintainFoodTime = value; } }
+
+        public long TimedSayTicker = 0;
+        public const long TimedSayDelay = 20 * Settings.Second;
 
         private bool shortcheck = true;
 
@@ -84,12 +87,23 @@ namespace Server.MirObjects
         }
 
 
-        protected internal IntelligentCreatureObject(MonsterInfo info)
-            : base(info)
+        public IntelligentCreatureObject(MonsterInfo info) : base(info)
         {
             ActionTime = Envir.Time + 1000;
-            petType = (IntelligentCreatureType)info.Effect;
-            CustomName = info.Name;
+            PetType = (IntelligentCreatureType)info.Effect;
+        }
+
+        public override void SetOperateTime()
+        {
+            base.SetOperateTime();
+
+            var time = OperateTime;
+
+            if (CreatureTime < time && CreatureTime > Envir.Time)
+                time = RoamTime;
+
+            if (OperateTime <= Envir.Time || time < OperateTime)
+                OperateTime = time;
         }
 
         public override void Process()
@@ -112,6 +126,14 @@ namespace Server.MirObjects
                 return;
             }
 
+            if (Envir.Time > CreatureTime)
+            {
+                CreatureTime = Envir.Time + Settings.Second;
+
+                ProcessBlackStoneProduction();
+                ProcessMaintainFoodBuff();
+            }
+
             if (Fullness == 0)//unable to operate with food level 0
             {
                 CreatureTimedSay("I'm starving!!.");
@@ -120,15 +142,19 @@ namespace Server.MirObjects
 
             DecreaseFullness(1);//Decrease Feeding
 
-            if (doDelayedPickup && Target != null && DoTargetList)//delayed pickup
+            if (DoDelayedPickup && Target != null && DoTargetList)//delayed pickup
             {
-                if (Envir.Time > delayedpickupTicker)
+                if (Envir.Time > DelayedpickupTicker)
                 {
                     PickupAllItems(Target.CurrentLocation);
                     Target = null;
-                    doDelayedPickup = false;
-                    if(TargetList.Count > 0)
+                    DoDelayedPickup = false;
+
+                    if (TargetList.Count > 0)
+                    {
                         TargetList.RemoveAt(0);
+                    }
+
                     if (TargetList.Count == 0)
                     {
                         DoTargetList = false;
@@ -154,20 +180,19 @@ namespace Server.MirObjects
             if (Target == null) ProcessAI();
             else ProcessTarget();
 
-            //ProcessBuffs();
             ProcessRegen();
         }
 
         public void ProcessAnimVariant()
         {
             
-            if (Envir.Time > animvariantTicker)
+            if (Envir.Time > AnimvariantTicker)
             {
-                animvariantTicker = Envir.Time + animvariantDelay;
+                AnimvariantTicker = Envir.Time + AnimvariantDelay;
                 ActionTime = Envir.Time + 300;
                 AttackTime = Envir.Time + AttackSpeed;
 
-                switch (petType)
+                switch (PetType)
                 {
                     case IntelligentCreatureType.BabyDragon:
                     case IntelligentCreatureType.OlympicFlame:
@@ -291,6 +316,8 @@ namespace Server.MirObjects
         
         protected override void FindTarget()
         {
+            if (Dead) return;
+
             if (Fullness < CreatureRules.MinimalFullness) return;
 
             //do automatic pickup/find
@@ -302,6 +329,8 @@ namespace Server.MirObjects
 
         private void FindItemTarget()
         {
+            if (Master == null) return;
+
             int range = shortcheck ? 4 : CreatureRules.AutoPickupRange;
 
             for (int d = 0; d <= range; d++)
@@ -429,10 +458,16 @@ namespace Server.MirObjects
             }
 
             bool remove = false;
-            if (TargetList[0] == null) remove = true;
-            if (TargetList[0].Race != ObjectType.Item) remove = true;
-            if (TargetList[0].Owner != null && TargetList[0].Owner != this && TargetList[0].Owner != Master && !IsMasterGroupMember(TargetList[0].Owner)) remove = true;
-            if (remove || TargetListTargetClean || TargetList[0].CurrentMap != CurrentMap)
+            MapObject targ = TargetList[0];
+            if (targ == null)
+                remove = true;
+            else
+            {
+                if (targ.CurrentMap != CurrentMap) remove = true;
+                if (targ.Race != ObjectType.Item) remove = true;
+                if (targ.Owner != null && targ.Owner != this && targ.Owner != Master && !IsMasterGroupMember(targ.Owner)) remove = true;
+            }
+            if (remove || TargetListTargetClean)
             {
                 TargetList.RemoveAt(0);
                 TargetListTargetClean = false;
@@ -440,7 +475,7 @@ namespace Server.MirObjects
                 return;
             }
 
-            Target = TargetList[0];
+            Target = targ;
 
             if (Target.CurrentLocation == CurrentLocation || (!CheckAndMoveTo(Target.CurrentLocation) && Functions.InRange(CurrentLocation, Target.CurrentLocation, 1)))
             {
@@ -523,7 +558,7 @@ namespace Server.MirObjects
             IncreasePearlProduction();
         }
 
-        protected bool DelayedAttack(long delay)
+        private bool DelayedAttack(long delay)
         {
             DelayedPickup(delay);
 
@@ -541,23 +576,24 @@ namespace Server.MirObjects
 
         public void DelayedPickup(long delay)
         {
-            delayedpickupTicker = Envir.Time + delay;
-            doDelayedPickup = true;
+            DelayedpickupTicker = Envir.Time + delay;
+            DoDelayedPickup = true;
         }
 
         public void PickupAllItems(Point location)
         {
             if (Dead || Master == null) return;
 
-            Cell cell = CurrentMap.GetCell(Target.CurrentLocation);
-            if (!cell.Valid || cell.Objects == null) return;
+            if (!CurrentMap.ValidPoint(location)) return;
+            Cell cell = CurrentMap.GetCell(location);
+            if (cell.Objects == null) return;
 
 
             int count = cell.Objects.Count;
 
             for (int i = 0; i < count; i++)
             {
-                PickUpItem(Target.CurrentLocation);
+                PickUpItem(location);
             }
         }
 
@@ -565,8 +601,9 @@ namespace Server.MirObjects
         {
             if (Dead || Master == null) return;
 
+            if (!CurrentMap.ValidPoint(location)) return;
             Cell cell = CurrentMap.GetCell(location);
-            if (!cell.Valid || cell.Objects == null) return;
+            if (cell.Objects == null) return;
             for (int i = 0; i < cell.Objects.Count; i++)
             {
                 MapObject ob = cell.Objects[i];
@@ -582,11 +619,11 @@ namespace Server.MirObjects
 
                     if (item.Item.Info.ShowGroupPickup && IsMasterGroupMember(Master))
                         for (int j = 0; j < Master.GroupMembers.Count; j++)
-                            Master.GroupMembers[j].ReceiveChat(Name + " Picked up: {" + item.Item.Name + "}", ChatType.Hint);
+                            Master.GroupMembers[j].ReceiveChat(Name + " Picked up: {" + item.Item.FriendlyName + "}", ChatType.Hint);
 
-                    if (item.Item.Info.Grade == ItemGrade.Mythical || item.Item.Info.Grade == ItemGrade.Legendary)
+                    if (item.Item.Info.Grade == ItemGrade.Mythical || item.Item.Info.Grade == ItemGrade.Legendary || item.Item.Info.Grade == ItemGrade.Heroic)
                     {
-                        Master.ReceiveChat("Pet Picked up: {" + item.Item.Name + "}", ChatType.Hint);
+                        Master.ReceiveChat("Pet Picked up: {" + item.Item.FriendlyName + "}", ChatType.Hint);
                         ((PlayerObject)Master).Enqueue(new S.IntelligentCreaturePickup { ObjectID = ObjectID });
                     }
 
@@ -658,75 +695,77 @@ namespace Server.MirObjects
         public void IncreaseFullness(int amount)
         {
             if (Fullness >= 10000) return;
-            fullnessTicker = Envir.Time + fullnessDelay;
+            FullnessTicker = Envir.Time + FullnessDelay;
             Fullness += amount;
             if (Fullness < CreatureRules.MinimalFullness) CreatureSay("*Hmmm*");
             else CreatureSay("*Burp*");
             if (Fullness > 10000) Fullness = 10000;
-
-            if (Master != null)
-                ((PlayerObject)Master).UpdateCreatureFullness(petType, Fullness);
         }
+
         public void DecreaseFullness(int amount)
         {
-            if (Fullness <= 0 || maintainfoodTime > 0) return;
+            if (Fullness <= 0 || MaintainfoodTime > 0) return;
 
-            if (Envir.Time > fullnessTicker)
+            if (Envir.Time > FullnessTicker)
             {
-                fullnessTicker = Envir.Time + fullnessDelay;
+                FullnessTicker = Envir.Time + FullnessDelay;
                 Fullness -= amount;
                 if (Fullness < 0) Fullness = 0;
                 if (Fullness < CreatureRules.MinimalFullness) CreatureTimedSay("*Me Hungry*");
-
-                if (Master != null)
-                    ((PlayerObject)Master).UpdateCreatureFullness(petType, Fullness);
             }
         }
 
         public void IncreasePearlProduction()
         {
-            pearlTicker++;
-            if (pearlTicker >= pearlProduceCount)
+            PearlTicker++;
+
+            if (PearlTicker >= PearlProduceCount)
             {
                 if (Master != null)
+                {
                     ((PlayerObject)Master).IntelligentCreatureProducePearl();
-                pearlTicker = 0;
+                }
+
+                PearlTicker = 0;
             }
         }
 
         public void ProcessBlackStoneProduction()
         {
             if (!CreatureRules.CanProduceBlackStone) return;
-            blackstoneTime ++;
-            if (blackstoneTime >= blackstoneProduceTime)
-            {
-                blackstoneTime = blackstoneProduceTime;
-                if (Master != null && ((PlayerObject)Master).IntelligentCreatureProduceBlackStone())
-                    blackstoneTime = 0;//reset
-            }
 
-            if (Master != null)
-                ((PlayerObject)Master).UpdateCreatureBlackstoneTime(petType, blackstoneTime);
+            BlackstoneTime++;
+
+            if (BlackstoneTime >= BlackstoneProduceTime)
+            {
+                if (Master != null)
+                {
+                    ((PlayerObject)Master).IntelligentCreatureProduceBlackStone();
+                }
+
+                BlackstoneTime = 0;
+            }
         }
 
         public void ProcessMaintainFoodBuff()
         {
-            if (maintainfoodTime > 0)
+            if (MaintainfoodTime > 0)
             {
-                maintainfoodTime--;
-                if (maintainfoodTime < 0) maintainfoodTime = 0;
+                MaintainfoodTime--;
 
-                if (Master != null)
-                    ((PlayerObject)Master).UpdateCreatureMaintainFoodTime(petType, maintainfoodTime);
+                if (MaintainfoodTime < 0)
+                {
+                    MaintainfoodTime = 0;
+                }
             }
         }
 
         public void CreatureTimedSay(string message)
         {
-            if (Envir.Time > timedSayTicker)
+            if (Envir.Time > TimedSayTicker)
             {
                 CreatureSay(message);
-                timedSayTicker = Envir.Time + timedSayDelay;
+                TimedSayTicker = Envir.Time + TimedSayDelay;
             }
         }
 
@@ -735,7 +774,7 @@ namespace Server.MirObjects
             if (Master != null)
             {
                 message = String.Format("{0}:{1}", CustomName, message);
-                ((PlayerObject)Master).IntelligentCreatureSay(petType, message);
+                ((PlayerObject)Master).IntelligentCreatureSay(PetType, message);
             }
         }
 
@@ -744,7 +783,7 @@ namespace Server.MirObjects
             if (type == ChatType.WhisperIn) CreatureSay("What?");
         }
 
-        public override bool IsAttackTarget(PlayerObject attacker)
+        public override bool IsAttackTarget(HumanObject attacker)
         {
             return false;
         }
@@ -752,7 +791,7 @@ namespace Server.MirObjects
         {
             return false;
         }
-        public override bool IsFriendlyTarget(PlayerObject ally)
+        public override bool IsFriendlyTarget(HumanObject ally)
         {
             return true;
         }
@@ -760,7 +799,7 @@ namespace Server.MirObjects
         {
             return true;
         }
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             return 0;
         }
@@ -790,8 +829,8 @@ namespace Server.MirObjects
         {
             base.Spawned();
             Summoned = true;
-            fullnessTicker = Envir.Time + fullnessDelay;
-            animvariantTicker = Envir.Time + animvariantDelay;
+            FullnessTicker = Envir.Time + FullnessDelay;
+            AnimvariantTicker = Envir.Time + AnimvariantDelay;
         }
 
         public override void Die()
@@ -826,6 +865,7 @@ namespace Server.MirObjects
                 Poison = CurrentPoison,
                 Hidden = Hidden,
                 Extra = Summoned,
+                Buffs = Buffs.Where(d => d.Info.Visible).Select(e => e.Type).ToList()
             };
         }
     }

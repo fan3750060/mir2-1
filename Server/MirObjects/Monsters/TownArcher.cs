@@ -1,6 +1,5 @@
 ﻿using Server.MirDatabase;
 using Server.MirEnvir;
-using System;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -9,7 +8,6 @@ namespace Server.MirObjects.Monsters
     {
         public long FearTime;
         public byte AttackRange = 10;
-
 
         protected override bool CanMove
         {
@@ -43,17 +41,12 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
-            int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500;
-
-            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, Target, damage, DefenceType.ACAgility);
-            ActionList.Add(action);
-
-            if (Target.Dead)
-                FindTarget();
+            ProjectileAttack(damage);
         }
+
         protected override void ProcessTarget()
         {
             if (Target == null || !CanAttack) return;
@@ -82,6 +75,7 @@ namespace Server.MirObjects.Monsters
                     Direction = (MirDirection)Respawn.Info.Direction;
             }
         }
+
         protected override void FindTarget()
         {
             for (int d = 0; d <= Info.ViewRange; d++)
@@ -118,6 +112,7 @@ namespace Server.MirObjects.Monsters
                 }
             }
         }
+
         protected override bool InAttackRange()
         {
             return CurrentMap == Target.CurrentMap && Functions.InRange(CurrentLocation, Target.CurrentLocation, AttackRange);

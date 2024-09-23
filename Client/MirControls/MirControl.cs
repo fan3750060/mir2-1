@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Windows.Forms;
-using Client.MirGraphics;
+﻿using Client.MirGraphics;
 using Client.MirSounds;
-using Microsoft.DirectX;
-using Microsoft.DirectX.Direct3D;
+using SlimDX;
+using SlimDX.Direct3D9;
 
 namespace Client.MirControls
 {
@@ -135,14 +131,10 @@ namespace Client.MirControls
         }
         protected virtual void CreateTexture()
         {
-            if (ControlTexture != null && !ControlTexture.Disposed && Size != TextureSize)
-                ControlTexture.Dispose();
-
             if (ControlTexture == null || ControlTexture.Disposed)
             {
                 DXManager.ControlList.Add(this);
                 ControlTexture = new Texture(DXManager.Device, Size.Width, Size.Height, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default);
-                ControlTexture.Disposing += ControlTexture_Disposing;
                 TextureSize = Size;
             }
 
@@ -155,19 +147,17 @@ namespace Client.MirControls
             TextureValid = true;
             surface.Dispose();
         }
-        protected void ControlTexture_Disposing(object sender, EventArgs e)
-        {
-            ControlTexture = null;
-            TextureValid = false;
-            TextureSize = Size.Empty;
 
-            DXManager.ControlList.Remove(this);
-        }
         internal void DisposeTexture()
         {
             if (ControlTexture == null || ControlTexture.Disposed) return;
 
             ControlTexture.Dispose();
+            ControlTexture = null;
+            TextureValid = false;
+            TextureSize = Size.Empty;
+
+            DXManager.ControlList.Remove(this);
         }
         #endregion
 
@@ -242,6 +232,7 @@ namespace Client.MirControls
                 foreach (MirControl control in Controls)
                     control.OnEnabledChanged();
         }
+        public bool AllowDisabledMouseOver;
         #endregion
 
         #region Events
@@ -687,6 +678,18 @@ namespace Client.MirControls
             _sound = SoundList.None;
         }
 
+        public virtual void Show()
+        {
+            if (Visible) return;
+            Visible = true;
+        }
+
+        public virtual void Hide()
+        {
+            if (!Visible) return;
+            Visible = false;
+        }
+
         public virtual void Draw()
         {
             if (IsDisposed || !Visible /*|| Size.Width == 0 || Size.Height == 0*/ || Size.Width > Settings.ScreenWidth || Size.Height > Settings.ScreenHeight)
@@ -721,11 +724,7 @@ namespace Client.MirControls
             if (ControlTexture == null || ControlTexture.Disposed)
                 return;
 
-            float oldOpacity = DXManager.Opacity;
-
-            DXManager.SetOpacity(Opacity);
-            DXManager.Sprite.Draw2D(ControlTexture, Point.Empty, 0F, DisplayLocation, Color.White);
-            DXManager.SetOpacity(oldOpacity);
+            DXManager.DrawOpaque(ControlTexture, new Rectangle(0, 0, Size.Width, Size.Height), new Vector3?(new Vector3((float)(DisplayLocation.X), (float)(DisplayLocation.Y), 0.0f)), Color.White, Opacity);
 
             CleanTime = CMain.Time + Settings.CleanDelay;
         }
@@ -798,7 +797,7 @@ namespace Client.MirControls
         }
         protected virtual void OnMouseEnter()
         {
-            if (!_enabled)
+            if (!_enabled && !AllowDisabledMouseOver)
                 return;
 
             Redraw();
@@ -808,7 +807,7 @@ namespace Client.MirControls
         }
         protected virtual void OnMouseLeave()
         {
-            if (!_enabled)
+            if (!_enabled && !AllowDisabledMouseOver)
                 return;
 
             Redraw();
@@ -852,7 +851,7 @@ namespace Client.MirControls
         }
         public virtual void OnMouseMove(MouseEventArgs e)
         {
-            if (!_enabled)
+            if (!_enabled && !AllowDisabledMouseOver)
                 return;
 
 
@@ -940,8 +939,7 @@ namespace Client.MirControls
             if (!Enabled)
                 return;
 
-            if (MouseWheel != null)
-                MouseWheel(this, e);
+            MouseWheel?.Invoke(this, e);
         }
         public virtual void OnKeyPress(KeyPressEventArgs e)
         {
@@ -998,6 +996,16 @@ namespace Client.MirControls
 
         }
 
+        #region Font
+        public virtual System.Drawing.Font ScaleFont(System.Drawing.Font font)
+        {
+            var theFont = new System.Drawing.Font(font.Name, font.Size * 96f / CMain.Graphics.DpiX, font.Style);
+            font.Dispose();
+            
+            return theFont;
+        }
+        #endregion
+
         #region Disposable
         public bool IsDisposed { get; private set; }
 
@@ -1029,10 +1037,7 @@ namespace Client.MirControls
                 _borderColour = Color.Empty;
 
                 DrawControlTexture = false;
-                if (ControlTexture != null && !ControlTexture.Disposed)
-                    ControlTexture.Dispose();
-                ControlTexture = null;
-                TextureValid = false;
+                DisposeTexture();
 
                 ControlAdded = null;
                 ControlRemoved = null;

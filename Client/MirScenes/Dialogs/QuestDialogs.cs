@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Text.RegularExpressions;
 using Client.MirControls;
 using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirObjects;
 using Client.MirSounds;
-using S = ServerPackets;
 using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
@@ -263,7 +255,7 @@ namespace Client.MirScenes.Dialogs
 
         }
 
-        public void Show()
+        public override void Show()
         {
             if (Visible) return;
             Visible = true;
@@ -275,7 +267,7 @@ namespace Client.MirScenes.Dialogs
             DisplayInfo();
         }
 
-        public void Hide()
+        public override void Hide()
         {
             if (!Visible) return;
             Visible = false;
@@ -642,17 +634,6 @@ namespace Client.MirScenes.Dialogs
             Show();
         }
 
-        private void Show()
-        {
-            if (Visible) return;
-            Visible = true;
-        }
-
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
     }
     public sealed class QuestDiaryDialog : MirImageControl
     {
@@ -784,18 +765,14 @@ namespace Client.MirScenes.Dialogs
             }
             TaskGroups.Clear();
         }
-        public void Show()
+        public override void Show()
         {
             if (Visible) return;
             Visible = true;
 
             DisplayQuests();
         }
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
+
         public void Toggle()
         {
             if (!Visible)
@@ -826,7 +803,6 @@ namespace Client.MirScenes.Dialogs
             Movable = true;
             Location = new Point(0, 100);
             Sort = false;
-            //Size = new Size(150, 50);
         }
 
         public void DisplayQuests()
@@ -892,6 +868,8 @@ namespace Client.MirScenes.Dialogs
                 y += 30;
             }
 
+            //Size = new Size(150, 20 + y + 30);
+
             Show();
         }
 
@@ -929,16 +907,6 @@ namespace Client.MirScenes.Dialogs
             Settings.SaveTrackedQuests(GameScene.User.Name);
         }
 
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
-        public void Show()
-        {
-            if (Visible) return;
-            Visible = true;
-        }
     }
 
     //Sub controls
@@ -1049,7 +1017,7 @@ namespace Client.MirScenes.Dialogs
         public Font Font = new Font(Settings.FontName, 8F);
         public List<string> CurrentLines = new List<string>();
 
-        private const string TaskTitle = "Tasks", ProgressTitle = "Progress";
+        private const string TaskTitle = "Tasks", ProgressTitle = "Progress", ReturnTitle = "Quest Return", TimeLimitTitle = "Time Limit";
 
         public QuestMessage(MirButton scrollUpButton, MirButton scrollDownButton, MirButton positionBar, int lineCount, bool displayProgress = false)
         {
@@ -1099,7 +1067,7 @@ namespace Client.MirScenes.Dialogs
 
             for (int i = TopLine; i < BottomLine; i++)
             {
-                if (i != 0 && CurrentLines[i] != TaskTitle && CurrentLines[i] != ProgressTitle) continue;
+                if (i != 0 && CurrentLines[i] != TaskTitle && CurrentLines[i] != ProgressTitle && CurrentLines[i] != ReturnTitle && CurrentLines[i]  != TimeLimitTitle) continue;
 
                 Libraries.Prguse.Draw(919, new Point(DisplayLocation.X + 5, DisplayLocation.Y + 5 + (i - TopLine) * 15 + adjust), Color.White);
 
@@ -1201,13 +1169,31 @@ namespace Client.MirScenes.Dialogs
             if (Quest.QuestInfo.TaskDescription.Count > 0)
             {
                 CurrentLines.Add(" ");
-
                 CurrentLines.Add(TaskTitle);
 
                 foreach (string task in Quest.QuestInfo.TaskDescription)
                 {
                     CurrentLines.Add(task);
                 }
+            }
+
+            if (Quest.QuestInfo.ReturnDescription.Count > 0)
+            {
+                CurrentLines.Add(" ");
+
+                CurrentLines.Add(ReturnTitle);
+
+                foreach (string questgiver in Quest.QuestInfo.ReturnDescription)
+                {
+                    CurrentLines.Add(questgiver);
+                }
+            }
+
+            if (Quest.QuestInfo.TimeLimitInSeconds > 0)
+            {
+                CurrentLines.Add(" ");
+                CurrentLines.Add(TimeLimitTitle);
+                CurrentLines.Add(Functions.PrintTimeSpanFromSeconds(Quest.QuestInfo.TimeLimitInSeconds, true));
             }
 
             if (Quest.Taken && Quest.TaskList.Count > 0 && DisplayProgress)
@@ -1250,7 +1236,7 @@ namespace Client.MirScenes.Dialogs
                 Color fontColor = Color.White;
                 bool title = false;
 
-                if (i == 0 || lines[i] == TaskTitle || lines[i] == ProgressTitle)
+                if (i == 0 || lines[i] == TaskTitle || lines[i] == ProgressTitle || lines[i] == ReturnTitle || lines[i] == TimeLimitTitle)
                 {
                     font = new Font(Settings.FontName, 10F, FontStyle.Bold);
                     title = true;
@@ -1596,7 +1582,7 @@ namespace Client.MirScenes.Dialogs
     {
         public ItemInfo Item;
         public UserItem ShowItem;
-        public uint Count;
+        public ushort Count;
 
         public bool Selected;
         public bool Fixed;

@@ -1,8 +1,5 @@
-﻿using System;
-using System.Drawing;
-using System.Net;
+﻿using System.Net;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 
 namespace Server
 {
@@ -38,6 +35,7 @@ namespace Server
             SafeZoneBorderCheckBox.Checked = Settings.SafeZoneBorder;
             SafeZoneHealingCheckBox.Checked = Settings.SafeZoneHealing;
             gameMasterEffect_CheckBox.Checked = Settings.GameMasterEffect;
+            lineMessageTimeTextBox.Text = Settings.LineMessageTimer.ToString();
 
             SaveDelayTextBox.Text = Settings.SaveDelay.ToString();
 
@@ -106,6 +104,8 @@ namespace Server
             Settings.SafeZoneBorder = SafeZoneBorderCheckBox.Checked;
             Settings.SafeZoneHealing = SafeZoneHealingCheckBox.Checked;
             Settings.GameMasterEffect = gameMasterEffect_CheckBox.Checked;
+            if (int.TryParse(lineMessageTimeTextBox.Text, out tempint))
+                Settings.LineMessageTimer = tempint;
         }
 
         private void IPAddressCheck(object sender, EventArgs e)
@@ -129,7 +129,9 @@ namespace Server
         private void VPathBrowseButton_Click(object sender, EventArgs e)
         {
             if (VPathDialog.ShowDialog() == DialogResult.OK)
-                VPathTextBox.Text = VPathDialog.FileName;
+            {
+                VPathTextBox.Text = string.Join(",", VPathDialog.FileNames);
+            }
         }
 
         private void Resolution_textbox_TextChanged(object sender, EventArgs e)
@@ -181,7 +183,7 @@ namespace Server
 
         bool tryParseTrustedHttp()
         {
-            string pattern = @"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{2,5}";
+            string pattern = @"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}";
             return Regex.IsMatch(HTTPTrustedIPAddressTextBox.Text, pattern);
         }
 

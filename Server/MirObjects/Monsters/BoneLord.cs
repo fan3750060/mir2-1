@@ -1,5 +1,4 @@
-﻿using System;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -32,41 +31,33 @@ namespace Server.MirObjects.Monsters
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
             bool range = CurrentLocation == Target.CurrentLocation || !Functions.InRange(CurrentLocation, Target.CurrentLocation, 1);
 
+            AttackTime = Envir.Time + AttackSpeed;
+            ActionTime = Envir.Time + 300;
+
             if (range)
             {
-                Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
+                Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID, Type = 0 });
 
-                AttackTime = Envir.Time + AttackSpeed;
-                ActionTime = Envir.Time + 300;
-
-                int damage = GetAttackPower(MinDC, MaxDC);
+                int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                 if (damage == 0) return;
 
-                if (Envir.Random.Next(Settings.MagicResistWeight) >= Target.MagicResist)
-                {
-                    int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
-
-                    DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, Target, damage, DefenceType.MACAgility);
-                    ActionList.Add(action);
-                }
+                int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
+                DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.MACAgility);
+                ActionList.Add(action);
             }
             else
             {
                 base.Attack();
             }
-
-            if (Target.Dead)
-                FindTarget();
-
         }
 
         protected override void ProcessTarget()
         {
             if (Target == null) return;
 
-            if (MaxHP >= 3)
+            if (Stats[Stat.HP] >= 3)
             {
-                byte stage = (byte)(HP / (MaxHP / 3));
+                byte stage = (byte)(HP / (Stats[Stat.HP] / 3));
 
                 if (stage < _stage)
                 {
@@ -127,7 +118,6 @@ namespace Server.MirObjects.Monsters
                 mob.ActionTime = Envir.Time + 2000;
                 SlaveList.Add(mob);
             }
-
         }
     }
 }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Linq;
-using System.Windows.Forms;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 
 namespace Server
@@ -45,11 +41,11 @@ namespace Server
                 if (Envir.MonsterInfoList[i].AI == 82)
                     WallIndex_combo.Items.Add(Envir.MonsterInfoList[i]);
 
-                if (Envir.MonsterInfoList[i].AI == 74)
+                if (Envir.MonsterInfoList[i].AI == 213)
                     SiegeIndex_combo.Items.Add(Envir.MonsterInfoList[i]);
             }
 
-                UpdateInterface();
+            UpdateInterface();
         }
 
 
@@ -114,7 +110,6 @@ namespace Server
                 GateYLoc_textbox.Text = selectedGate.Location.Y.ToString();
                 GateName_textbox.Text = selectedGate.Name;
                 GateCost_textbox.Text = selectedGate.RepairCost.ToString();
-
             }
             else
             {
@@ -125,7 +120,6 @@ namespace Server
                 GateName_textbox.Text = string.Empty;
                 GateCost_textbox.Text = string.Empty;
             }
-
         }
 
         private void UpdateWalls()
@@ -138,7 +132,6 @@ namespace Server
                 WallYLoc_textbox.Text = selectedWall.Location.Y.ToString();
                 WallName_textbox.Text = selectedWall.Name;
                 WallCost_textbox.Text = selectedWall.RepairCost.ToString();
-
             }
             else
             {
@@ -149,7 +142,6 @@ namespace Server
                 WallName_textbox.Text = string.Empty;
                 WallCost_textbox.Text = string.Empty;
             }
-
         }
 
         private void UpdateSiege()
@@ -162,7 +154,6 @@ namespace Server
                 SiegeYLoc_textbox.Text = selectedSiege.Location.Y.ToString();
                 SiegeName_textbox.Text = selectedSiege.Name;
                 SiegeCost_textbox.Text = selectedSiege.RepairCost.ToString();
-
             }
             else
             {
@@ -197,60 +188,17 @@ namespace Server
 
         private void UpdateInterface()
         {
-
-            if (ConquestInfoListBox.Items.Count != Envir.ConquestInfos.Count)
+            if (ConquestInfoListBox.Items.Count != Envir.ConquestInfoList.Count)
             {
                 ConquestInfoListBox.Items.Clear();
 
-                for (int i = 0; i < Envir.ConquestInfos.Count; i++)
+                for (int i = 0; i < Envir.ConquestInfoList.Count; i++)
                 {
-                    ConquestInfoListBox.Items.Add(Envir.ConquestInfos[i]);
+                    ConquestInfoListBox.Items.Add(Envir.ConquestInfoList[i]);
                 }
             }
 
             selectedConquest = (ConquestInfo)ConquestInfoListBox.SelectedItem;
-
-
-            Maps_listbox.Items.Clear();
-            Guards_listbox.Items.Clear();
-            Gates_listbox.Items.Clear();
-            Walls_listbox.Items.Clear();
-            Siege_listbox.Items.Clear();
-            Flags_listbox.Items.Clear();
-            Index_textbox.Text = string.Empty;
-            Name_textbox.Text = string.Empty;
-            FullMap_checkbox.Checked = false;
-            LocX_textbox.Text = string.Empty;
-            LocY_textbox.Text = string.Empty;
-            Size_textbox.Text = string.Empty;
-            ObLocX_textbox.Text = string.Empty;
-            ObLocY_textbox.Text = string.Empty;
-            ObSize_textbox.Text = string.Empty;
-            Controls_listbox.Items.Clear();
-            ConquestMap_combo.SelectedIndex = -1;
-            PalaceMap_combo.SelectedIndex = -1;
-            ExtraMaps_combo.SelectedIndex = -1;
-            WarType_combo.SelectedIndex = -1;
-            WarMode_combo.SelectedIndex = -1;
-            ArcherIndex_combo.SelectedIndex = -1;
-            ArchXLoc_textbox.Text = string.Empty;
-            ArchYLoc_textbox.Text = string.Empty;
-            Archer_gb.Enabled = false;
-            SiegeIndex_combo.SelectedIndex = -1;
-            SiegeXLoc_textbox.Text = string.Empty;
-            SiegeYLoc_textbox.Text = string.Empty;
-            Siege_gb.Enabled = false;
-            SiegeName_textbox.Text = string.Empty;
-            Main_tabs.Enabled = false;
-            WarLength_num.Value = 60;
-            StartHour_num.Value = 1;
-            Mon_checkbox.Checked = false;
-            Tue_checkbox.Checked = false;
-            Wed_checkbox.Checked = false;
-            Thu_checkbox.Checked = false;
-            Fri_checkbox.Checked = false;
-            Sat_checkbox.Checked = false;
-            Sun_checkbox.Checked = false;
 
             if (selectedConquest != null)
             {
@@ -278,6 +226,15 @@ namespace Server
                 Fri_checkbox.Checked = selectedConquest.Friday;
                 Sat_checkbox.Checked = selectedConquest.Saturday;
                 Sun_checkbox.Checked = selectedConquest.Sunday;
+
+                Guards_listbox.Items.Clear();
+                Maps_listbox.Items.Clear();
+                Gates_listbox.Items.Clear();
+                Walls_listbox.Items.Clear();
+                Siege_listbox.Items.Clear();
+                Flags_listbox.Items.Clear();
+                Controls_listbox.Items.Clear();
+
                 for (int i = 0; i < selectedConquest.ConquestGuards.Count; i++)
                 {
                     Guards_listbox.Items.Add(selectedConquest.ConquestGuards[i]);
@@ -310,9 +267,50 @@ namespace Server
                 {
                     Controls_listbox.Items.Add(selectedConquest.ControlPoints[i]);
                 }
-
             }
-
+            else
+            {
+                Maps_listbox.Items.Clear();
+                Guards_listbox.Items.Clear();
+                Gates_listbox.Items.Clear();
+                Walls_listbox.Items.Clear();
+                Siege_listbox.Items.Clear();
+                Flags_listbox.Items.Clear();
+                Index_textbox.Text = string.Empty;
+                Name_textbox.Text = string.Empty;
+                FullMap_checkbox.Checked = false;
+                LocX_textbox.Text = string.Empty;
+                LocY_textbox.Text = string.Empty;
+                Size_textbox.Text = string.Empty;
+                ObLocX_textbox.Text = string.Empty;
+                ObLocY_textbox.Text = string.Empty;
+                ObSize_textbox.Text = string.Empty;
+                Controls_listbox.Items.Clear();
+                ConquestMap_combo.SelectedIndex = -1;
+                PalaceMap_combo.SelectedIndex = -1;
+                ExtraMaps_combo.SelectedIndex = -1;
+                WarType_combo.SelectedIndex = -1;
+                WarMode_combo.SelectedIndex = -1;
+                ArcherIndex_combo.SelectedIndex = -1;
+                ArchXLoc_textbox.Text = string.Empty;
+                ArchYLoc_textbox.Text = string.Empty;
+                Archer_gb.Enabled = false;
+                SiegeIndex_combo.SelectedIndex = -1;
+                SiegeXLoc_textbox.Text = string.Empty;
+                SiegeYLoc_textbox.Text = string.Empty;
+                Siege_gb.Enabled = false;
+                SiegeName_textbox.Text = string.Empty;
+                Main_tabs.Enabled = false;
+                WarLength_num.Value = 60;
+                StartHour_num.Value = 1;
+                Mon_checkbox.Checked = false;
+                Tue_checkbox.Checked = false;
+                Wed_checkbox.Checked = false;
+                Thu_checkbox.Checked = false;
+                Fri_checkbox.Checked = false;
+                Sat_checkbox.Checked = false;
+                Sun_checkbox.Checked = false;
+            }
         }
 
         private void ConquestInfoListBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -323,20 +321,17 @@ namespace Server
 
         private void AddConq_button_Click(object sender, EventArgs e)
         {
-            Envir.ConquestInfos.Add(new ConquestInfo { Index = ++Envir.ConquestIndex, Location = new Point(0, 0), Size = 10, Name = "Conquest Wall", MapIndex = 1, PalaceIndex = 2});
+            Envir.ConquestInfoList.Add(new ConquestInfo { Index = ++Envir.ConquestIndex, Location = new Point(0, 0), Size = 10, Name = "Conquest Wall", MapIndex = 1, PalaceIndex = 2});
             UpdateInterface();
         }
 
         private void AddGuard_button_Click(object sender, EventArgs e)
-        {
-            
+        {       
             if (selectedConquest != null)
             {
                  selectedConquest.ConquestGuards.Add(new ConquestArcherInfo { Location = new Point(0, 0), Name = "Guard", Index = ++selectedConquest.GuardIndex, MobIndex = 1, RepairCost = 1000 });
                  UpdateInterface();
-            }
-            
-                
+            }    
         }
 
         private void Guards_listbox_SelectedIndexChanged(object sender, EventArgs e)
@@ -348,8 +343,7 @@ namespace Server
                 UpdateArchers();
             }
             else
-                selectedArcher = null;
-            
+                selectedArcher = null; 
         }
 
         private void AddExtraMap_button_Click(object sender, EventArgs e)
@@ -360,7 +354,6 @@ namespace Server
                 selectedConquest.ExtraMaps.Add(temp.Index);
                 UpdateInterface();
             }
-
         }
 
         private void ConquestInfoForm_FormClosed(object sender, FormClosedEventArgs e)
@@ -370,12 +363,14 @@ namespace Server
 
         private void Name_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedConquest.Name = ActiveControl.Text;
         }
 
         private void LocX_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -392,6 +387,7 @@ namespace Server
 
         private void LocY_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -408,6 +404,7 @@ namespace Server
 
         private void Size_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             ushort temp;
@@ -424,6 +421,7 @@ namespace Server
 
         private void ArchXLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -439,6 +437,7 @@ namespace Server
 
         private void ArchYLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -454,24 +453,25 @@ namespace Server
 
         private void ConquestMap_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             MapInfo temp = (MapInfo)ConquestMap_combo.SelectedItem;
             selectedConquest.MapIndex = temp.Index;
-
         }
 
         private void PalaceMap_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             MapInfo temp = (MapInfo)PalaceMap_combo.SelectedItem;
             selectedConquest.PalaceIndex = temp.Index;
-
         }
 
         private void ArcherIndex_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             MonsterInfo temp = (MonsterInfo)ArcherIndex_combo.SelectedItem;
@@ -480,6 +480,7 @@ namespace Server
 
         private void ArcherName_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedArcher.Name = ActiveControl.Text;
         }
@@ -495,8 +496,7 @@ namespace Server
 
         private void Gates_listbox_SelectedIndexChanged(object sender, EventArgs e)
         {
-
-
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             if (Gates_listbox.SelectedIndex != -1)
             {
@@ -509,6 +509,7 @@ namespace Server
 
         private void GateXLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -524,6 +525,7 @@ namespace Server
 
         private void GateIndex_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             MonsterInfo temp = (MonsterInfo)GateIndex_combo.SelectedItem;
@@ -532,6 +534,7 @@ namespace Server
 
         private void GateYLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -556,6 +559,7 @@ namespace Server
 
         private void Walls_listbox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             if (Walls_listbox.SelectedIndex != -1)
             {
@@ -568,6 +572,7 @@ namespace Server
 
         private void WallIndex_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             MonsterInfo temp = (MonsterInfo)WallIndex_combo.SelectedItem;
@@ -576,6 +581,7 @@ namespace Server
 
         private void WallXLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -591,6 +597,7 @@ namespace Server
 
         private void WallYLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -606,6 +613,7 @@ namespace Server
 
         private void ArcherCost_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             uint temp;
@@ -621,11 +629,12 @@ namespace Server
 
         private void GateCost_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
-            uint temp;
+            int temp;
 
-            if (!uint.TryParse(ActiveControl.Text, out temp))
+            if (!int.TryParse(ActiveControl.Text, out temp) || temp < 0)
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -636,11 +645,12 @@ namespace Server
 
         private void WallCost_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
-            uint temp;
+            int temp;
 
-            if (!uint.TryParse(ActiveControl.Text, out temp))
+            if (!int.TryParse(ActiveControl.Text, out temp) || temp < 0)
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -651,6 +661,7 @@ namespace Server
 
         private void GateName_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedGate.Name = ActiveControl.Text;
         }
@@ -662,6 +673,7 @@ namespace Server
 
         private void WallName_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedWall.Name = ActiveControl.Text;
         }
@@ -669,12 +681,14 @@ namespace Server
 
         private void WarType_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
                 selectedConquest.Type = (ConquestType)WarType_combo.SelectedItem;
         }
 
         private void WarMode_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedConquest.Game = (ConquestGame)WarMode_combo.SelectedItem;
         }
@@ -686,48 +700,58 @@ namespace Server
 
         private void StartHour_num_ValueChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
                 selectedConquest.StartHour = (byte)StartHour_num.Value;
         }
 
         private void WarLength_num_ValueChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
                 selectedConquest.WarLength = (int)WarLength_num.Value;
         }
 
         private void Mon_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             selectedConquest.Monday = Mon_checkbox.Checked;
         }
 
         private void Tue_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
+
             selectedConquest.Tuesday = Tue_checkbox.Checked;
         }
 
         private void Wed_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             selectedConquest.Wednesday = Wed_checkbox.Checked;
         }
 
         private void Thu_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             selectedConquest.Thursday = Thu_checkbox.Checked;
         }
 
         private void Fri_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             selectedConquest.Friday = Fri_checkbox.Checked;
         }
 
         private void Sat_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             selectedConquest.Saturday = Sat_checkbox.Checked;
         }
 
         private void Sun_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             selectedConquest.Sunday = Sun_checkbox.Checked;
         }
 
@@ -737,16 +761,16 @@ namespace Server
 
             if (MessageBox.Show("Are you sure you want to remove the selected Conquest?", "Remove Items?", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
 
-            Envir.ConquestInfos.Remove(selectedConquest);
+            Envir.ConquestInfoList.Remove(selectedConquest);
 
-            if (Envir.ConquestInfos.Count == 0) Envir.ConquestIndex = 0;
+            if (Envir.ConquestInfoList.Count == 0) Envir.ConquestIndex = 0;
 
             UpdateInterface();
-
         }
 
         private void RemoveMap_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (Maps_listbox.SelectedItem != null)
                 selectedConquest.ExtraMaps.Remove(((MapInfo)Maps_listbox.SelectedItem).Index);
 
@@ -760,6 +784,7 @@ namespace Server
 
         private void RemoveGuard_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (Guards_listbox.SelectedItem != null)
                 selectedConquest.ConquestGuards.Remove((ConquestArcherInfo)Guards_listbox.SelectedItem);
 
@@ -768,6 +793,7 @@ namespace Server
 
         private void RemoveGate_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (Gates_listbox.SelectedItem != null)
                 selectedConquest.ConquestGates.Remove((ConquestGateInfo)Gates_listbox.SelectedItem);
 
@@ -776,6 +802,7 @@ namespace Server
 
         private void RemoveWall_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (Walls_listbox.SelectedItem != null)
                 selectedConquest.ConquestWalls.Remove((ConquestWallInfo)Walls_listbox.SelectedItem);
 
@@ -784,6 +811,7 @@ namespace Server
 
         private void ObLocX_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -800,6 +828,7 @@ namespace Server
 
         private void ObLocY_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -816,6 +845,7 @@ namespace Server
 
         private void ObSize_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             ushort temp;
@@ -832,6 +862,7 @@ namespace Server
 
         private void Siege_listbox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             if (Siege_listbox.SelectedIndex != -1)
             {
@@ -853,6 +884,7 @@ namespace Server
 
         private void RemoveSiege_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (Siege_listbox.SelectedItem != null)
                 selectedConquest.ConquestSieges.Remove((ConquestSiegeInfo)Siege_listbox.SelectedItem);
 
@@ -861,6 +893,7 @@ namespace Server
 
         private void SiegeXLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -876,6 +909,7 @@ namespace Server
 
         private void SiegeYLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -891,17 +925,19 @@ namespace Server
 
         private void SiegeName_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedSiege.Name = ActiveControl.Text;
         }
 
         private void SiegeCost_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
-            uint temp;
+            int temp;
 
-            if (!uint.TryParse(ActiveControl.Text, out temp))
+            if (!int.TryParse(ActiveControl.Text, out temp) || temp < 0)
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -912,6 +948,7 @@ namespace Server
 
         private void SiegeIndex_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             MonsterInfo temp = (MonsterInfo)SiegeIndex_combo.SelectedItem;
@@ -920,6 +957,7 @@ namespace Server
 
         private void RemoveFlag_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (Flags_listbox.SelectedItem != null)
                 selectedConquest.ConquestFlags.Remove((ConquestFlagInfo)Flags_listbox.SelectedItem);
 
@@ -928,6 +966,7 @@ namespace Server
 
         private void AddFlag_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (selectedConquest != null)
             {
                 selectedConquest.ConquestFlags.Add(new ConquestFlagInfo { Location = new Point(0, 0), Name = "Flag", Index = ++selectedConquest.FlagIndex });
@@ -937,6 +976,7 @@ namespace Server
 
         private void FlagXLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -952,6 +992,7 @@ namespace Server
 
         private void FlagYLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -967,12 +1008,14 @@ namespace Server
 
         private void FlagName_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedFlag.Name = ActiveControl.Text;
         }
 
         private void Flags_listbox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             if (Flags_listbox.SelectedIndex != -1)
             {
@@ -985,12 +1028,14 @@ namespace Server
 
         private void FlagFilename_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedFlag.FileName = ActiveControl.Text;
         }
 
         private void FullMap_checkbox_CheckedChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedConquest.FullMap = FullMap_checkbox.Checked;
         }
@@ -999,6 +1044,7 @@ namespace Server
 
         private void Control_Listbox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             if (Controls_listbox.SelectedIndex != -1)
             {
@@ -1011,6 +1057,7 @@ namespace Server
 
         private void AddControl_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (selectedConquest != null)
             {
                 selectedConquest.ControlPoints.Add(new ConquestFlagInfo { Location = new Point(0, 0), Name = "Control Point", Index = ++selectedConquest.ControlPointIndex });
@@ -1020,6 +1067,7 @@ namespace Server
 
         private void RemoveControl_button_Click(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (Controls_listbox.SelectedItem != null)
                 selectedConquest.ControlPoints.Remove((ConquestFlagInfo)Controls_listbox.SelectedItem);
 
@@ -1028,6 +1076,7 @@ namespace Server
 
         private void ControlXLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -1043,6 +1092,7 @@ namespace Server
 
         private void ControlYLoc_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
 
             int temp;
@@ -1058,12 +1108,14 @@ namespace Server
 
         private void ControlName_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedControlPoint.Name = ActiveControl.Text;
         }
 
         private void ControlFilename_textbox_TextChanged(object sender, EventArgs e)
         {
+            if (selectedConquest == null) return;
             if (ActiveControl != sender) return;
             selectedControlPoint.FileName = ActiveControl.Text;
         }

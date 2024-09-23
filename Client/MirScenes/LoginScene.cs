@@ -1,18 +1,11 @@
-﻿using System;
-using System.Drawing;
-using System.IO;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Windows.Forms;
 using Client.MirControls;
 using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirSounds;
 using S = ServerPackets;
 using C = ClientPackets;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Client.MirScenes
 {
@@ -33,9 +26,8 @@ namespace Client.MirScenes
 
         public LoginScene()
         {
-
-            SoundManager.PlaySound(SoundList.IntroMusic, true);
-            Disposing += (o, e) => SoundManager.StopSound(SoundList.IntroMusic);
+            SoundManager.PlayMusic(SoundList.IntroMusic, true);
+            Disposing += (o, e) => SoundManager.StopMusic();
 
             _background = new MirAnimatedControl
                 {
@@ -56,12 +48,10 @@ namespace Client.MirScenes
                     _account = new NewAccountDialog { Parent = _background };
                     _account.Disposing += (o1, e1) => _login.Show();
                 };
+
             _login.PassButton.Click += (o, e) =>
                 {
-                    _login.Hide();
-                    if (_ViewKey != null && !_ViewKey.IsDisposed) _ViewKey.Dispose();
-                    _password = new ChangePasswordDialog { Parent = _background };
-                    _password.Disposing += (o1, e1) => _login.Show();
+                    OpenPasswordChangeDialog(string.Empty, string.Empty);                    
                 };
 
             _login.ViewKeyButton.Click += (o, e) =>     //ADD
@@ -72,15 +62,15 @@ namespace Client.MirScenes
             };
 
             Version = new MirLabel
-                {
-                    AutoSize = true,
-                    BackColour = Color.FromArgb(200, 50, 50, 50),
-                    Border = true,
-                    BorderColour = Color.Black,
-                    Location = new Point(5, 580),
-                    Parent = _background,
-                    Text = string.Format("Version: {0}", Application.ProductVersion),
-                };
+            {
+                AutoSize = true,
+                BackColour = Color.FromArgb(200, 50, 50, 50),
+                Border = true,
+                BorderColour = Color.Black,
+                Location = new Point(5, Settings.ScreenHeight - 20),
+                Parent = _background,
+                Text = string.Format("Build: {0}.{1}.{2}", Globals.ProductCodename, Settings.UseTestConfig ? "Debug" : "Release", Application.ProductVersion),
+            };
 
             TestLabel = new MirImageControl
             {
@@ -90,30 +80,6 @@ namespace Client.MirScenes
                 Location = new Point(Settings.ScreenWidth - 116, 10),
                 Visible = Settings.UseTestConfig
             };
-
-            //ViolenceLabel = new MirImageControl
-            //{
-            //    Index = 89,
-            //    Library = Libraries.Prguse,
-            //    Parent = this,
-            //    Location = new Point(471, 10)
-            //};
-
-            //MinorLabel = new MirImageControl
-            //{
-            //    Index = 87,
-            //    Library = Libraries.Prguse,
-            //    Parent = this,
-            //    Location = new Point(578, 10)
-            //};
-
-            //YouthLabel = new MirImageControl
-            //{
-            //    Index = 88,
-            //    Library = Libraries.Prguse,
-            //    Parent = this,
-            //    Location = new Point(684, 10)
-            //};
 
             _connectBox = new MirMessageBox("Attempting to connect to the server.", MirMessageBoxButtons.Cancel);
             _connectBox.CancelButton.Click += (o, e) => Program.Form.Close();
@@ -198,6 +164,16 @@ namespace Client.MirScenes
                     _login.Show();
                     break;
             }
+        }
+
+        private void OpenPasswordChangeDialog(string autoFillID, string autoFillPassword)
+        {
+            _login.Hide();
+            if (_ViewKey != null && !_ViewKey.IsDisposed) _ViewKey.Dispose();
+            _password = new ChangePasswordDialog { Parent = _background };
+            _password.AccountIDTextBox.Text = autoFillID;
+            _password.CurrentPasswordTextBox.Text = autoFillPassword;
+            _password.Disposing += (o1, e1) => _login.Show();
         }
         private void NewAccount(S.NewAccount p)
         {
@@ -313,6 +289,11 @@ namespace Client.MirScenes
                     MirMessageBox.Show(GameLanguage.IncorrectPasswordAccountID);
                     _login.PasswordTextBox.Text = string.Empty;
                     _login.PasswordTextBox.SetFocus();
+                    break;
+                case 5:
+                    MirMessageBox.Show("The account's password must be changed before logging in.");                    
+                    OpenPasswordChangeDialog(_login.AccountIDTextBox.Text, _login.PasswordTextBox.Text);
+                    _login.PasswordTextBox.Text = string.Empty;
                     break;
             }
         }
@@ -432,32 +413,30 @@ namespace Client.MirScenes
                     };
                 CloseButton.Click += (o, e) => Program.Form.Close();
 
-                AccountIDTextBox = new MirTextBox
-                    {
-                        Location = new Point(85, 85),
-                        Parent = this,
-                        Size = new Size(136, 12),
-                        MaxLength = Globals.MaxAccountIDLength
-                };
-                AccountIDTextBox.SetFocus();
-                AccountIDTextBox.TextBox.TextChanged += AccountIDTextBox_TextChanged;
-                AccountIDTextBox.TextBox.KeyPress += TextBox_KeyPress;
-                AccountIDTextBox.Text = Settings.AccountID;
-
-
-
                 PasswordTextBox = new MirTextBox
-                    {
-                        Location = new Point(85, 108),
-                        Parent = this,
-                        Password = true,
-                        Size = new Size(136, 15),
-                        MaxLength = Globals.MaxPasswordLength
-                    };
+                {
+                    Location = new Point(85, 108),
+                    Parent = this,
+                    Password = true,
+                    Size = new Size(136, 15),
+                    MaxLength = Globals.MaxPasswordLength
+                };
 
                 PasswordTextBox.TextBox.TextChanged += PasswordTextBox_TextChanged;
                 PasswordTextBox.TextBox.KeyPress += TextBox_KeyPress;
                 PasswordTextBox.Text = Settings.Password;
+
+                AccountIDTextBox = new MirTextBox
+                {
+                    Location = new Point(85, 85),
+                    Parent = this,
+                    Size = new Size(136, 15),
+                    MaxLength = Globals.MaxAccountIDLength
+                };
+
+                AccountIDTextBox.TextBox.TextChanged += AccountIDTextBox_TextChanged;
+                AccountIDTextBox.TextBox.KeyPress += TextBox_KeyPress;
+                AccountIDTextBox.Text = Settings.AccountID;
 
             }
 
@@ -478,7 +457,6 @@ namespace Client.MirScenes
                     AccountIDTextBox.Border = true;
                     AccountIDTextBox.BorderColour = Color.Green;
                 }
-
             }
             private void PasswordTextBox_TextChanged(object sender, EventArgs e)
             {
@@ -531,12 +509,7 @@ namespace Client.MirScenes
                 Network.Enqueue(new C.Login {AccountID = AccountIDTextBox.Text, Password = PasswordTextBox.Text});
             }
 
-            public void Hide()
-            {
-                if (!Visible) return;
-                Visible = false;
-            }
-            public void Show()
+            public override void Show()
             {
                 if (Visible) return;
                 Visible = true;
@@ -825,21 +798,6 @@ namespace Client.MirScenes
                 };
                 OKButton.Click += (o, e) => CreateAccount();
 
-
-                AccountIDTextBox = new MirTextBox
-                {
-                    Border = true,
-                    BorderColour = Color.Gray,
-                    Location = new Point(226, 103),
-                    MaxLength = Globals.MaxAccountIDLength,
-                    Parent = this,
-                    Size = new Size(136, 18),
-                };
-                AccountIDTextBox.SetFocus();
-                AccountIDTextBox.TextBox.MaxLength = Globals.MaxAccountIDLength;
-                AccountIDTextBox.TextBox.TextChanged += AccountIDTextBox_TextChanged;
-                AccountIDTextBox.TextBox.GotFocus += AccountIDTextBox_GotFocus;
-
                 Password1TextBox = new MirTextBox
                 {
                     Border = true,
@@ -944,7 +902,20 @@ namespace Client.MirScenes
                     Size = new Size(300, 70),
                     Visible = false
                 };
-                
+
+                AccountIDTextBox = new MirTextBox
+                {
+                    Border = true,
+                    BorderColour = Color.Gray,
+                    Location = new Point(226, 103),
+                    MaxLength = Globals.MaxAccountIDLength,
+                    Parent = this,
+                    Size = new Size(136, 18),
+                };
+
+                AccountIDTextBox.TextBox.MaxLength = Globals.MaxAccountIDLength;
+                AccountIDTextBox.TextBox.TextChanged += AccountIDTextBox_TextChanged;
+                AccountIDTextBox.TextBox.GotFocus += AccountIDTextBox_GotFocus;
             }
 
 
@@ -1162,7 +1133,7 @@ namespace Client.MirScenes
                     });
             }
             
-            public void Show()
+            public override void Show()
             {
                 if (Visible) return;
                 Visible = true;
@@ -1374,7 +1345,7 @@ namespace Client.MirScenes
                     });
             }
 
-            public void Show()
+            public override void Show()
             {
                 if (Visible) return;
                 Visible = true;

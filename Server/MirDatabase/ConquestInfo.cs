@@ -1,8 +1,5 @@
-﻿using Server.MirEnvir;
-using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
+﻿using Server.MirEnvir;
 
 namespace Server.MirDatabase
 {
@@ -15,6 +12,7 @@ namespace Server.MirDatabase
         public string Name;
         public int MapIndex;
         public int PalaceIndex;
+
         public List<int> ExtraMaps = new List<int>();
         public List<ConquestArcherInfo> ConquestGuards = new List<ConquestArcherInfo>();
         public List<ConquestGateInfo> ConquestGates = new List<ConquestGateInfo>();
@@ -30,8 +28,6 @@ namespace Server.MirDatabase
 
         public byte StartHour = 0;
         public int WarLength = 60;
-
-        private int counter;
 
         public ConquestType Type = ConquestType.Request;
         public ConquestGame Game = ConquestGame.CapturePalace;
@@ -52,16 +48,13 @@ namespace Server.MirDatabase
         public List<ConquestFlagInfo> ControlPoints = new List<ConquestFlagInfo>();
         public int ControlPointIndex;
 
-        public ConquestInfo()
-        {
-
-        }
+        public ConquestInfo() { }
 
         public ConquestInfo(BinaryReader reader)
         {
             Index = reader.ReadInt32();
 
-            if(Envir.LoadVersion > 73)
+            if (Envir.LoadVersion > 73)
             {
                 FullMap = reader.ReadBoolean();
             }
@@ -81,26 +74,30 @@ namespace Server.MirDatabase
                 FlagIndex = reader.ReadInt32();
             }
 
-            counter = reader.ReadInt32();
+            var counter = reader.ReadInt32();
             for (int i = 0; i < counter; i++)
             {
                 ConquestGuards.Add(new ConquestArcherInfo(reader));
             }
+
             counter = reader.ReadInt32();
             for (int i = 0; i < counter; i++)
             {
                 ExtraMaps.Add(reader.ReadInt32());
             }
+
             counter = reader.ReadInt32();
             for (int i = 0; i < counter; i++)
             {
                 ConquestGates.Add(new ConquestGateInfo(reader));
             }
+
             counter = reader.ReadInt32();
             for (int i = 0; i < counter; i++)
             {
                 ConquestWalls.Add(new ConquestWallInfo(reader));
             }
+
             counter = reader.ReadInt32();
             for (int i = 0; i < counter; i++)
             {
@@ -164,21 +161,25 @@ namespace Server.MirDatabase
             {
                 ConquestGuards[i].Save(writer);
             }
+
             writer.Write(ExtraMaps.Count);
             for (int i = 0; i < ExtraMaps.Count; i++)
             {
                 writer.Write(ExtraMaps[i]);
             }
+
             writer.Write(ConquestGates.Count);
             for (int i = 0; i < ConquestGates.Count; i++)
             {
                 ConquestGates[i].Save(writer);
             }
+
             writer.Write(ConquestWalls.Count);
             for (int i = 0; i < ConquestWalls.Count; i++)
             {
                 ConquestWalls[i].Save(writer);
             }
+
             writer.Write(ConquestSieges.Count);
             for (int i = 0; i < ConquestSieges.Count; i++)
             {
@@ -190,6 +191,7 @@ namespace Server.MirDatabase
             {
                 ConquestFlags[i].Save(writer);
             }
+
             writer.Write(StartHour);
             writer.Write(WarLength);
             writer.Write((byte)Type);
@@ -213,7 +215,6 @@ namespace Server.MirDatabase
             {
                 ControlPoints[i].Save(writer);
             }
-
         }
 
         public override string ToString()
@@ -228,12 +229,9 @@ namespace Server.MirDatabase
         public Point Location;
         public int MobIndex;
         public string Name;
-        public uint RepairCost;
+        public int RepairCost;
 
-        public ConquestSiegeInfo()
-        {
-
-        }
+        public ConquestSiegeInfo() { }
 
         public ConquestSiegeInfo(BinaryReader reader)
         {
@@ -241,7 +239,15 @@ namespace Server.MirDatabase
             Location = new Point(reader.ReadInt32(), reader.ReadInt32());
             MobIndex = reader.ReadInt32();
             Name = reader.ReadString();
-            RepairCost = reader.ReadUInt32();
+
+            if (Envir.LoadVersion <= 84)
+            {
+                RepairCost = (int)reader.ReadUInt32();
+            }
+            else
+            {
+                RepairCost = reader.ReadInt32();
+            }
         }
 
         public void Save(BinaryWriter writer)
@@ -258,8 +264,6 @@ namespace Server.MirDatabase
         {
             return string.Format("{0} - {1} ({2})", Index, Name, Location);
         }
-
-
     }
 
     public class ConquestWallInfo
@@ -268,12 +272,9 @@ namespace Server.MirDatabase
         public Point Location;
         public int MobIndex;
         public string Name;
-        public uint RepairCost;
+        public int RepairCost;
 
-        public ConquestWallInfo()
-        {
-
-        }
+        public ConquestWallInfo() { }
 
         public ConquestWallInfo(BinaryReader reader)
         {
@@ -281,7 +282,15 @@ namespace Server.MirDatabase
             Location = new Point(reader.ReadInt32(), reader.ReadInt32());
             MobIndex = reader.ReadInt32();
             Name = reader.ReadString();
-            RepairCost = reader.ReadUInt32();
+
+            if (Envir.LoadVersion <= 84)
+            {
+                RepairCost = (int)reader.ReadUInt32();
+            }
+            else
+            {
+                RepairCost = reader.ReadInt32();
+            }
         }
 
         public void Save(BinaryWriter writer)
@@ -298,8 +307,6 @@ namespace Server.MirDatabase
         {
             return string.Format("{0} - {1} ({2})", Index, Name, Location);
         }
-
-
     }
 
     public class ConquestGateInfo
@@ -308,12 +315,9 @@ namespace Server.MirDatabase
         public Point Location;
         public int MobIndex;
         public string Name;
-        public uint RepairCost;
+        public int RepairCost;
 
-        public ConquestGateInfo()
-        {
-
-        }
+        public ConquestGateInfo() { }
 
         public ConquestGateInfo(BinaryReader reader)
         {
@@ -321,7 +325,15 @@ namespace Server.MirDatabase
             Location = new Point(reader.ReadInt32(), reader.ReadInt32());
             MobIndex = reader.ReadInt32();
             Name = reader.ReadString();
-            RepairCost = reader.ReadUInt32();
+
+            if (Envir.LoadVersion <= 84)
+            {
+                RepairCost = (int)reader.ReadUInt32();
+            }
+            else
+            {
+                RepairCost = reader.ReadInt32();
+            }
         }
 
         public void Save(BinaryWriter writer)
@@ -338,8 +350,6 @@ namespace Server.MirDatabase
         {
             return string.Format("{0} - {1} ({2})", Index, Name, Location);
         }
-
-
     }
 
     public class ConquestArcherInfo
@@ -350,10 +360,7 @@ namespace Server.MirDatabase
         public string Name;
         public uint RepairCost;
 
-        public ConquestArcherInfo()
-        {
-
-        }
+        public ConquestArcherInfo() { }
 
         public ConquestArcherInfo(BinaryReader reader)
         {
@@ -378,8 +385,6 @@ namespace Server.MirDatabase
         {
             return string.Format("{0} - {1} ({2})", Index, Name, Location);
         }
-
-
     }
 
     public class ConquestFlagInfo
@@ -389,10 +394,7 @@ namespace Server.MirDatabase
         public string Name;
         public string FileName = string.Empty;
 
-        public ConquestFlagInfo()
-        {
-
-        }
+        public ConquestFlagInfo() { }
 
         public ConquestFlagInfo(BinaryReader reader)
         {

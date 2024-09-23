@@ -1,11 +1,7 @@
-﻿using System;
-using System.Diagnostics;
-using Client.MirControls;
+﻿using Client.MirControls;
 using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirSounds;
-using System.Drawing;
-using System.Windows.Forms;
 using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
@@ -189,16 +185,6 @@ namespace Client.MirScenes.Dialogs
         {
             Network.Enqueue(new C.CancelItemRental());
         }
-
-        private void Hide()
-        {
-            Visible = false;
-        }
-
-        private void Show()
-        {
-            Visible = true;
-        }
     }
 
     public sealed class GuestItemRentDialog : MirImageControl
@@ -298,16 +284,6 @@ namespace Client.MirScenes.Dialogs
         {
             _lockButton.Index = 250;
             _guestGoldLocked = false;
-        }
-
-        private void Hide()
-        {
-            Visible = false;
-        }
-
-        public void Show()
-        {
-            Visible = true;
         }
     }
 }

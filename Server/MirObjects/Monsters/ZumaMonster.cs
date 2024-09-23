@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
 
 namespace Server.MirObjects.Monsters
 {
-    class ZumaMonster : MonsterObject
+    public class ZumaMonster : MonsterObject
     {
         public bool Stoned = true;
         public bool AvoidFireWall = true;
@@ -46,14 +42,14 @@ namespace Server.MirObjects.Monsters
 
             base.ApplyPoison(p, Caster, NoResist, ignoreDefence);
         }
-        public override void AddBuff(Buff b)
+        public override Buff AddBuff(BuffType type, MapObject owner, int duration, Stats stats, bool refreshStats = true, bool updateOnly = false, params int[] values)
         {
-            if (Stoned) return;
+            if (Stoned) return null;
 
-            base.AddBuff(b);
+            return base.AddBuff(type, owner, duration, stats, refreshStats, updateOnly, values);
         }
-        
-        public override bool IsFriendlyTarget(PlayerObject ally)
+
+        public override bool IsFriendlyTarget(HumanObject ally)
         {
             if (Stoned) return false;
 
@@ -75,6 +71,7 @@ namespace Server.MirObjects.Monsters
 
             base.ProcessAI();
         }
+
         public void Wake()
         {
             if (!Stoned) return;
@@ -83,9 +80,9 @@ namespace Server.MirObjects.Monsters
             Broadcast(new S.ObjectShow { ObjectID = ObjectID });
             ActionTime = Envir.Time + 1000;
         }
+
         public void WakeAll(int dist)
         {
-
             for (int y = CurrentLocation.Y - dist; y <= CurrentLocation.Y + dist; y++)
             {
                 if (y < 0) continue;
@@ -115,7 +112,7 @@ namespace Server.MirObjects.Monsters
         {
             return !Stoned && base.IsAttackTarget(attacker);
         }
-        public override bool IsAttackTarget(PlayerObject attacker)
+        public override bool IsAttackTarget(HumanObject attacker)
         {
             return !Stoned && base.IsAttackTarget(attacker);
         }
@@ -152,27 +149,19 @@ namespace Server.MirObjects.Monsters
 
             if (Hidden)
             {
-                Hidden = false;
-
-                for (int i = 0; i < Buffs.Count; i++)
-                {
-                    if (Buffs[i].Type != BuffType.Hiding) continue;
-
-                    Buffs[i].ExpireTime = 0;
-                    break;
-                }
+                RemoveBuff(BuffType.Hiding);
             }
-
 
             CellTime = Envir.Time + 500;
             ActionTime = Envir.Time + 300;
             MoveTime = Envir.Time + MoveSpeed;
 
+            if (MoveTime > AttackTime)
+                AttackTime = MoveTime;
+
             InSafeZone = CurrentMap.GetSafeZone(CurrentLocation) != null;
 
             Broadcast(new S.ObjectWalk { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
-
-
 
             cell = CurrentMap.GetCell(CurrentLocation);
 
@@ -187,7 +176,6 @@ namespace Server.MirObjects.Monsters
 
             return true;
         }
-
 
         public override Packet GetInfo()
         {
@@ -207,6 +195,7 @@ namespace Server.MirObjects.Monsters
                 Poison = CurrentPoison,
                 Hidden = Hidden,
                 Extra = Stoned,
+                Buffs = Buffs.Where(d => d.Info.Visible).Select(e => e.Type).ToList()
             };
         }
     }

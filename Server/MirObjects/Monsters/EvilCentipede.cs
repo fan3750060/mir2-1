@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class EvilCentipede : MonsterObject
+    public class EvilCentipede : MonsterObject
     {
         public bool Visible;
         public long VisibleTime;
@@ -39,7 +35,7 @@ namespace Server.MirObjects.Monsters
         protected override void ProcessAI()
         {
             if (!Visible)
-                SetHP(MaxHP);
+                SetHP(Stats[Stat.HP]);
             if (!Dead && Envir.Time > VisibleTime)
             {
                 VisibleTime = Envir.Time + 2000;
@@ -53,7 +49,6 @@ namespace Server.MirObjects.Monsters
                     Broadcast(GetInfo());
                     Broadcast(new S.ObjectShow { ObjectID = ObjectID });
                     ActionTime = Envir.Time + 2000;
-
                 }
 
                 if (Visible && !visible)
@@ -63,7 +58,7 @@ namespace Server.MirObjects.Monsters
 
                     Broadcast(new S.ObjectHide { ObjectID = ObjectID });
 
-                    SetHP(MaxHP);
+                    SetHP(Stats[Stat.HP]);
                 }
             }
 
@@ -81,7 +76,7 @@ namespace Server.MirObjects.Monsters
         {
             return Visible && base.IsAttackTarget(attacker);
         }
-        public override bool IsAttackTarget(PlayerObject attacker)
+        public override bool IsAttackTarget(HumanObject attacker)
         {
             return Visible && base.IsAttackTarget(attacker);
         }
@@ -104,8 +99,8 @@ namespace Server.MirObjects.Monsters
                 Target = targets[i];
                 Attack();
             }
-
         }
+
         protected override void ProcessTarget()
         {
             if (!CanAttack) return;
@@ -115,24 +110,20 @@ namespace Server.MirObjects.Monsters
 
             Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
             ActionList.Add(new DelayedAction(DelayedType.Damage, Envir.Time + 500));
+
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
         }
 
         protected override void Attack()
         {
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
             if (Target.Attacked(this, damage, DefenceType.MAC) <= 0) return;
 
-            if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-            {
-                if (Envir.Random.Next(5) == 0)
-                    Target.ApplyPoison(new Poison { Owner = this, Duration = 15, PType = PoisonType.Green, Value = GetAttackPower(MinSC, MaxSC), TickSpeed = 2000 }, this);
-                if (Envir.Random.Next(15) == 0)
-                    Target.ApplyPoison(new Poison { PType = PoisonType.Paralysis, Duration = 5, TickSpeed = 1000 }, this);
-            }
+            PoisonTarget(Target, 5, 15, PoisonType.Green, 2000);
+            PoisonTarget(Target, 15, 5, PoisonType.Paralysis, 2000);
         }
 
 

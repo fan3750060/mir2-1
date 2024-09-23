@@ -1,7 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
-using Client.MirGraphics;
+﻿using Client.MirGraphics;
 
 namespace Client.MirControls
 {
@@ -113,7 +110,7 @@ namespace Client.MirControls
             e.Handled = true;
         }
 
-        public void Show()
+        public override void Show()
         {
             if (Parent != null) return;
 

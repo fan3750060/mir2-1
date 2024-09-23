@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class IncarnatedZT : ZumaMonster
+    public class IncarnatedZT : ZumaMonster
     {
         protected internal IncarnatedZT(MonsterInfo info) : base(info)
         {
@@ -25,24 +21,30 @@ namespace Server.MirObjects.Monsters
 
             ShockTime = 0;
 
-
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
             Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
-
 
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
-            if (Target.Attacked(this, damage, DefenceType.MACAgility) <= 0) return;
+            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.MACAgility);
+            ActionList.Add(action);
+        }
 
-            if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-            {
-                if (Envir.Random.Next(12) == 0)
-                    Target.ApplyPoison(new Poison { PType = PoisonType.Paralysis, Duration = 5, TickSpeed = 1000 }, this);
-            }
+        protected override void CompleteAttack(IList<object> data)
+        {
+            MapObject target = (MapObject)data[0];
+            int damage = (int)data[1];
+            DefenceType defence = (DefenceType)data[2];
+
+            if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
+
+            if (target.Attacked(this, damage, defence) <= 0) return;
+
+            PoisonTarget(target, 12, 5, PoisonType.Paralysis, 1000);
         }
     }
 

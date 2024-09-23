@@ -1,13 +1,10 @@
-﻿using System;
-using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
-using System.Collections.Generic;
 
 namespace Server.MirObjects.Monsters
 {
-    class FlameScythe : MonsterObject
+    public class FlameScythe : MonsterObject
     {
         public long FearTime;
         public byte AttackRange = 2;
@@ -42,17 +39,18 @@ namespace Server.MirObjects.Monsters
             {
                 Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
 
+                //TODO - Fix this
                 List<MapObject> targets = FindAllTargets(2, Target.CurrentLocation, false);
 
-                int damage = GetAttackPower(MinMC, MaxMC);
+                int damage = GetAttackPower(Stats[Stat.MinMC], Stats[Stat.MaxMC]);
 
                 if (damage > 0 && targets.Count > 0)
                 {
                     for (int i = 0; i < targets.Count; i++)
                     {
-                        if (Envir.Random.Next(Settings.MagicResistWeight) >= targets[i].MagicResist)
+                        if (Envir.Random.Next(Settings.MagicResistWeight) >= targets[i].Stats[Stat.MagicResist])
                         {
-                            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 500, targets[i], damage, DefenceType.MACAgility);
+                            DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + 500, targets[i], damage, DefenceType.MACAgility);
                             ActionList.Add(action);
                         }
                     }
@@ -112,7 +110,6 @@ namespace Server.MirObjects.Monsters
                         }
                         break;
                 }
-
             }
         }
     }

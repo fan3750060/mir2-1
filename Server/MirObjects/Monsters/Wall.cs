@@ -1,9 +1,5 @@
-﻿using System;
-using Server.MirDatabase;
-using Server.MirEnvir;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
-using System.Collections.Generic;
-using System.Drawing;
 
 namespace Server.MirObjects.Monsters
 {
@@ -28,15 +24,16 @@ namespace Server.MirObjects.Monsters
             }
         }
         protected override bool CanMove { get { return false; } }
+
         public override void Turn(MirDirection dir) { }
 
         public override bool Walk(MirDirection dir) { return false; }
 
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             CheckDirection();
 
-            if (!Conquest.WarIsOn || attacker.MyGuild != null && Conquest.Owner == attacker.MyGuild.Guildindex) damage = 0;
+            if (!Conquest.WarIsOn || attacker.MyGuild != null && Conquest.GuildInfo.Owner == attacker.MyGuild.Guildindex) damage = 0;
 
             return base.Attacked(attacker, damage, type, damageWeapon);
         }
@@ -53,9 +50,9 @@ namespace Server.MirObjects.Monsters
         public void RepairWall()
         {
             if (HP == 0)
-                Revive(MaxHP, false);
+                Revive(Stats[Stat.HP], false);
             else
-                SetHP(MaxHP);
+                SetHP(Stats[Stat.HP]);
 
             CheckDirection();
         }
@@ -78,7 +75,7 @@ namespace Server.MirObjects.Monsters
 
         protected int GetDamageLevel()
         {
-            int level = (int)Math.Round((double)(4 * HP) / MaxHP);
+            int level = (int)Math.Round((double)(4 * HP) / Stats[Stat.HP]);
 
             if (level < 1) level = 1;
 

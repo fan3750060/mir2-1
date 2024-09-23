@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Client.MirControls
+﻿namespace Client.MirControls
 {
     public class MirAnimatedControl : MirImageControl
     {
@@ -234,7 +231,7 @@ namespace Client.MirControls
             if (++OffSet < _animationCount) return;
 
             EventHandler temp = AfterAnimation;
-            AfterAnimation = null;
+            //AfterAnimation = null;
 
             if (!Loop)
                 Animated = false;

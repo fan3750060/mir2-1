@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Windows.Forms;
-using Server.MirEnvir;
+﻿using Server.MirEnvir;
 
 namespace Server
 {
@@ -74,7 +69,7 @@ namespace Server
             for (int i = 0; i < SMain.EditEnvir.GameShopList.Count; i++)
             {
                 if (ClassFilter_lb.Text == "All Classes" || SMain.EditEnvir.GameShopList[i].Class == ClassFilter_lb.Text)
-                    if (SectionFilter_lb.Text == "All Items" || SMain.EditEnvir.GameShopList[i].TopItem && SectionFilter_lb.Text == "Top Items" || SMain.EditEnvir.GameShopList[i].Deal && SectionFilter_lb.Text == "Sale Items" || SMain.EditEnvir.GameShopList[i].Date > DateTime.Now.AddDays(-7) && SectionFilter_lb.Text == "New Items")
+                    if (SectionFilter_lb.Text == "All Items" || SMain.EditEnvir.GameShopList[i].TopItem && SectionFilter_lb.Text == "Top Items" || SMain.EditEnvir.GameShopList[i].Deal && SectionFilter_lb.Text == "Sale Items" || SMain.EditEnvir.GameShopList[i].Date > Envir.Now.AddDays(-7) && SectionFilter_lb.Text == "New Items")
                         if (CategoryFilter_lb.Text == "All Categories" || SMain.EditEnvir.GameShopList[i].Category == CategoryFilter_lb.Text)
                             GameShopListBox.Items.Add(SMain.EditEnvir.GameShopList[i]);
             }
@@ -105,6 +100,8 @@ namespace Server
                 TotalSold_label.Text = "0";
                 LeftinStock_label.Text = "";
                 Count_textbox.Text = String.Empty;
+                CreditOnlyBox.Checked = false;
+                GoldOnlyBox.Checked = false;
                 return;
             }
 
@@ -119,7 +116,8 @@ namespace Server
             TopItem_checkbox.Checked = SelectedItems[0].TopItem;
             DealofDay_checkbox.Checked = SelectedItems[0].Deal;
             Count_textbox.Text = SelectedItems[0].Count.ToString();
-
+            CreditOnlyBox.Checked = SelectedItems[0].CanBuyCredit;
+            GoldOnlyBox.Checked = SelectedItems[0].CanBuyGold;
             GetStats();
 
         }
@@ -280,9 +278,9 @@ namespace Server
         {
             if (ActiveControl != sender) return;
 
-            uint temp;
+            ushort temp;
 
-            if (!uint.TryParse(ActiveControl.Text, out temp))
+            if (!ushort.TryParse(ActiveControl.Text, out temp) || temp > 999)
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -340,5 +338,24 @@ namespace Server
                 SMain.Envir.ResetGS = true;
             }
         }
+        private void GoldOnlyBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender)
+                return;
+
+            for (int i = 0; i < SelectedItems.Count; i++)
+                SelectedItems[i].CanBuyGold = GoldOnlyBox.Checked;
+        }
+
+        private void CreditOnly_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender)
+                return;
+
+            for (int i = 0; i < SelectedItems.Count; i++)
+                SelectedItems[i].CanBuyCredit = CreditOnlyBox.Checked;
+        }
+
+
     }
 }

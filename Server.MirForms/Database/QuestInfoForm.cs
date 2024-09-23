@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using System.Diagnostics;
 
@@ -12,7 +6,7 @@ namespace Server
 {
     public partial class QuestInfoForm : Form
     {
-        public string QuestListPath = Path.Combine(Settings.ExportPath, "QuestList.txt");
+        public string QuestListPath = Path.Combine(Settings.ExportPath, "QuestList.csv");
 
         public Envir Envir => SMain.EditEnvir;
 
@@ -116,6 +110,8 @@ namespace Server
             RequiredQuestComboBox.SelectedItem = tempQuest;  //test
             RequiredClassComboBox.SelectedItem = info.RequiredClass;
 
+            TimeLimitTextBox.Text = info.TimeLimitInSeconds.ToString();
+
             for (int i = 1; i < _selectedQuestInfos.Count; i++)
             {
                 info = _selectedQuestInfos[i];
@@ -140,6 +136,8 @@ namespace Server
 
                 if (RequiredClassComboBox.SelectedItem != null)
                     if ((RequiredClass)RequiredClassComboBox.SelectedItem != info.RequiredClass) RequiredClassComboBox.SelectedItem = null;
+
+                if (TimeLimitTextBox.SelectedText != info.TimeLimitInSeconds.ToString()) TimeLimitTextBox.Text = "0";
             }
         }
 
@@ -207,7 +205,7 @@ namespace Server
 
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.InitialDirectory = Path.Combine(Application.StartupPath, "Exports");
-            sfd.Filter = "Text File|*.txt";
+            sfd.Filter = "CSV File|*.csv";
             sfd.ShowDialog();
 
             if (sfd.FileName == string.Empty) return;
@@ -228,7 +226,7 @@ namespace Server
             string Path = string.Empty;
 
             OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Text File|*.txt";
+            ofd.Filter = "CSV File|*.csv";
             ofd.ShowDialog();
 
             if (ofd.FileName == string.Empty) return;
@@ -381,7 +379,9 @@ namespace Server
             var scriptPath = Path.Combine(Settings.QuestPath, QFileNameTextBox.Text + ".txt");
 
             if (File.Exists(scriptPath))
-                Process.Start(scriptPath);
+            {
+                Shared.Helpers.FileIO.OpenScript(scriptPath, true);
+            } 
             else
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(scriptPath));
@@ -391,11 +391,25 @@ namespace Server
                 File.WriteAllText(scriptPath,
                     $"{"[@Description]"}\r\n\r\n{"[@TaskDescription]"}\r\n\r\n{"[@Completion]"}\r\n\r\n{"[@KillTasks]"}\r\n\r\n{"[@ItemTasks]"}\r\n\r\n{"[@FlagTasks]"}\r\n\r\n{"[@CarryItems]"}\r\n\r\n{"[@FixedRewards]"}\r\n\r\n{"[@SelectRewards]"}\r\n\r\n{"[@ExpReward]"}\r\n\r\n{"[@GoldReward]"}");
 
-                Process.Start(scriptPath);
+                Shared.Helpers.FileIO.OpenScript(scriptPath, true);
             }
         }
 
+        private void TimeLimitTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender) return;
 
+            int temp;
 
+            if (!int.TryParse(ActiveControl.Text, out temp))
+            {
+                ActiveControl.BackColor = Color.Red;
+                return;
+            }
+            ActiveControl.BackColor = SystemColors.Window;
+
+            for (int i = 0; i < _selectedQuestInfos.Count; i++)
+                _selectedQuestInfos[i].TimeLimitInSeconds = temp;
+        }
     }
 }

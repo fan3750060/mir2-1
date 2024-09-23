@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
@@ -37,7 +33,7 @@ namespace Server.MirObjects.Monsters
 
             if(InAttackRange())
             {
-                if(ranged)
+                if (ranged)
                 {
                     if(Envir.Random.Next(5) == 0)
                     {
@@ -47,12 +43,12 @@ namespace Server.MirObjects.Monsters
                         ActionTime = Envir.Time + 300;
                         AttackTime = Envir.Time + AttackSpeed;
 
-                        int damage = GetAttackPower(MinDC, MaxDC);
+                        int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                         if (damage == 0) return;
 
                         int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
 
-                        DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, Target, damage, DefenceType.ACAgility);
+                        DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.ACAgility);
                         ActionList.Add(action);
 
                         return;
@@ -83,7 +79,7 @@ namespace Server.MirObjects.Monsters
 
             for (int i = 0; i < targets.Count; i++)
             {
-                ActionList.Add(new DelayedAction(DelayedType.Die, Envir.Time + 500, targets[i], GetAttackPower(MinDC, MaxDC), DefenceType.ACAgility));
+                ActionList.Add(new DelayedAction(DelayedType.Die, Envir.Time + 500, targets[i], GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]), DefenceType.ACAgility));
             }
 
             base.Die();
@@ -97,11 +93,7 @@ namespace Server.MirObjects.Monsters
             
             if (target.Attacked(this, damage, defence) <= 0) return;
 
-            if (Envir.Random.Next(Settings.PoisonResistWeight) >= target.PoisonResist)
-            {
-                if (Envir.Random.Next(5) == 0)
-                    target.ApplyPoison(new Poison { Owner = this, Duration = 5, PType = PoisonType.Green, Value = GetAttackPower(MinSC, MaxSC), TickSpeed = 2000 }, this);
-            }
+            PoisonTarget(target, 5, 5, PoisonType.Green, 2000);
         }
     }
 }

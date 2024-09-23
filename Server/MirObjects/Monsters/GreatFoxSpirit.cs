@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class GreatFoxSpirit : MonsterObject
+    public class GreatFoxSpirit : MonsterObject
     {
         private byte _stage;
         private long RecallTime;
@@ -17,6 +16,7 @@ namespace Server.MirObjects.Monsters
             : base(info)
         {
         }
+
         protected override bool InAttackRange()
         {
             return CurrentMap == Target.CurrentMap && Functions.InRange(CurrentLocation, Target.CurrentLocation, AttackRange);
@@ -26,9 +26,9 @@ namespace Server.MirObjects.Monsters
         {
             if (Dead) return;
 
-            if (MaxHP >= 4)
+            if (Stats[Stat.HP] >= 4)
             {
-                byte stage = (byte)(4 - (HP / (MaxHP / 4)));
+                byte stage = (byte)(4 - (HP / (Stats[Stat.HP] / 4)));
 
                 if (stage > _stage)
                 {
@@ -63,7 +63,7 @@ namespace Server.MirObjects.Monsters
                     {
                         if (Functions.MaxDistance(CurrentLocation, targets[i].CurrentLocation) > 3)
                         {
-                            if (Envir.Random.Next(Settings.MagicResistWeight) < targets[i].MagicResist) continue;
+                            if (Envir.Random.Next(Settings.MagicResistWeight) < targets[i].Stats[Stat.MagicResist]) continue;
                             if (!targets[i].Teleport(CurrentMap, Functions.PointMove(CurrentLocation, (MirDirection)((byte)Envir.Random.Next(7)), 1)))
                             targets[i].Teleport(CurrentMap, CurrentLocation);
                             return;
@@ -97,7 +97,7 @@ namespace Server.MirObjects.Monsters
                 return;
             }
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
             ShockTime = 0;
@@ -116,13 +116,24 @@ namespace Server.MirObjects.Monsters
             {
                 Target = targets[i];
                 if (ranged) Broadcast(new S.ObjectEffect { ObjectID = Target.ObjectID, Effect = SpellEffect.GreatFoxSpirit });
-                if (Target.Attacked(this, damage, DefenceType.MAC) <= 0) return;
 
-                if (Envir.Random.Next(5) == 0)
-                    Target.ApplyPoison(new Poison { Owner = this, Duration = 15, PType = PoisonType.Slow, TickSpeed = 1000 }, this);
-                if (Envir.Random.Next(15) == 0)
-                    Target.ApplyPoison(new Poison { PType = PoisonType.Paralysis, Duration = 5, TickSpeed = 1000 }, this);
+                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.MAC);
+                ActionList.Add(action);
             }
+        }
+
+        protected override void CompleteAttack(IList<object> data)
+        {
+            MapObject target = (MapObject)data[0];
+            int damage = (int)data[1];
+            DefenceType defence = (DefenceType)data[2];
+
+            if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
+
+            if (target.Attacked(this, damage, defence) <= 0) return;
+
+            PoisonTarget(target, 5, 15, PoisonType.Slow, 1000);
+            PoisonTarget(target, 5, 5, PoisonType.Paralysis, 1000);
         }
 
         public override void Die()
@@ -183,6 +194,7 @@ namespace Server.MirObjects.Monsters
                 Poison = CurrentPoison,
                 Hidden = Hidden,
                 ExtraByte = _stage,
+                Buffs = Buffs.Where(d => d.Info.Visible).Select(e => e.Type).ToList()
             };
         }
     }

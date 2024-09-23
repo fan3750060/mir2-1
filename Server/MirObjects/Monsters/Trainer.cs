@@ -1,13 +1,10 @@
-﻿using System;
-using System.Drawing;
-using Server.MirDatabase;
-using S = ServerPackets;
+﻿using Server.MirDatabase;
 
 namespace Server.MirObjects.Monsters
 {
     public class Trainer : MonsterObject
     {
-        private PlayerObject _currentAttacker = null;
+        private HumanObject _currentAttacker = null;
         private int _hitCount = 0, _totalDamage = 0;
         private long _lastAttackTime = 0, _StartTime = 0;
         private bool Poisoned = false;
@@ -23,7 +20,7 @@ namespace Server.MirObjects.Monsters
         protected override void ProcessRoam() { }
 
         public override bool Blocking { get { return true; } }
-        public override bool IsAttackTarget(PlayerObject attacker) { return true; }
+        public override bool IsAttackTarget(HumanObject attacker) { return true; }
         public override bool IsAttackTarget(MonsterObject attacker) 
         {
             if (attacker.Master == null) return false;
@@ -58,7 +55,7 @@ namespace Server.MirObjects.Monsters
         }
 
         // Player attacking trainer.
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = false)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = false)
         {
             if (attacker == null) return 0;
 
@@ -68,18 +65,19 @@ namespace Server.MirObjects.Monsters
                 ResetStats();
             }
 
-            damage += attacker.AttackBonus;
+            damage += attacker.Stats[Stat.AttackBonus];
+
             int armour = 0;
             //deal with trainers defense
             switch (type)
             {
                 case DefenceType.AC:
                 case DefenceType.ACAgility:
-                    armour = GetDefencePower(MinAC, MaxAC);
+                    armour = GetAttackPower(Stats[Stat.MinAC], Stats[Stat.MaxAC]);
                     break;
                 case DefenceType.MAC:
                 case DefenceType.MACAgility:
-                    armour = GetDefencePower(MinMAC, MaxMAC);
+                    armour = GetAttackPower(Stats[Stat.MinMAC], Stats[Stat.MaxMAC]);
                     break;
             }
             if (armour >= damage)
@@ -87,7 +85,10 @@ namespace Server.MirObjects.Monsters
                 BroadcastDamageIndicator(DamageType.Miss);
                 return 0;
             }
+
             damage -= armour;
+
+            attacker.GatherElement();
 
             if (_currentAttacker == null)
                 _StartTime = Envir.Time;
@@ -119,11 +120,11 @@ namespace Server.MirObjects.Monsters
             {
                 case DefenceType.AC:
                 case DefenceType.ACAgility:
-                    armour = GetDefencePower(MinAC, MaxAC);
+                    armour = GetAttackPower(Stats[Stat.MinAC], Stats[Stat.MaxAC]);
                     break;
                 case DefenceType.MAC:
                 case DefenceType.MACAgility:
-                    armour = GetDefencePower(MinMAC, MaxMAC);
+                    armour = GetAttackPower(Stats[Stat.MinMAC], Stats[Stat.MaxMAC]);
                     break;
             }
             if (armour >= damage)
@@ -172,7 +173,6 @@ namespace Server.MirObjects.Monsters
             if (_currentAttacker != null && (_currentAttacker != attacker || _currentAttacker != attacker.Master))
             {
                 OutputAverage();
-                ResetStats();
             }
             
             if (_currentAttacker == null)
@@ -199,7 +199,7 @@ namespace Server.MirObjects.Monsters
             if (CanRegen)
             {
                 RegenTime = Envir.Time + RegenDelay;
-                healthRegen += (int)(MaxHP * 0.022F) + 1;
+                healthRegen += (int)(Stats[Stat.HP] * 0.022F) + 1;
             }
             if (healthRegen > 0) ChangeHP(healthRegen);
         }

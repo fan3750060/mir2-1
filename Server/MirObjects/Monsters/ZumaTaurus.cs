@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class ZumaTaurus : ZumaMonster
+    public class ZumaTaurus : ZumaMonster
     {
         private byte _stage = 7;
 
@@ -21,9 +17,9 @@ namespace Server.MirObjects.Monsters
         {
             if (Dead) return;
             
-            if (MaxHP >= 7)
+            if (Stats[Stat.HP] >= 7)
             {
-                byte stage = (byte)(HP / (MaxHP / 7));
+                byte stage = (byte)(HP / (Stats[Stat.HP] / 7));
 
                 if (stage < _stage) SpawnSlaves();
                 _stage = stage;
@@ -46,15 +42,16 @@ namespace Server.MirObjects.Monsters
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
             Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
 
-
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
-            Target.Attacked(this, damage, DefenceType.MACAgility);
+            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.MACAgility);
+            ActionList.Add(action);
         }
+
         private void SpawnSlaves()
         {
             int count = Math.Min(8, 40 - SlaveList.Count);
@@ -96,7 +93,6 @@ namespace Server.MirObjects.Monsters
                 mob.ActionTime = Envir.Time + 2000;
                 SlaveList.Add(mob);
             }
-
         }
     }
 }

@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class GuardianRock : MonsterObject
+    public class GuardianRock : MonsterObject
     {
         public bool Active = true;
         protected override bool CanMove { get { return false; } }
@@ -41,6 +39,7 @@ namespace Server.MirObjects.Monsters
 
             Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
             PullAttack();
+
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
         }
@@ -48,7 +47,7 @@ namespace Server.MirObjects.Monsters
         private void PullAttack()
         {
             MirDirection pushdir = Functions.DirectionFromPoint(Target.CurrentLocation, CurrentLocation);
-            if (Envir.Random.Next(Settings.MagicResistWeight) < Target.MagicResist) return;
+            if (Envir.Random.Next(Settings.MagicResistWeight) < Target.Stats[Stat.MagicResist]) return;
             int distance = Functions.MaxDistance(Target.CurrentLocation, CurrentLocation) -1;
             if (distance <= 0) return;
             if (distance > 4) distance = 4;
@@ -78,7 +77,7 @@ namespace Server.MirObjects.Monsters
             return 0;
         }
 
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             return 0;
         }

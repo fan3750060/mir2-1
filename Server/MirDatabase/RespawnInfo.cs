@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
-using System.Linq;
 using Server.MirEnvir;
 
 namespace Server.MirDatabase
@@ -40,10 +36,7 @@ namespace Server.MirDatabase
             Delay = reader.ReadUInt16();
             Direction = reader.ReadByte();
 
-            if (Envir.LoadVersion >= 36)
-            {
-                RoutePath = reader.ReadString();
-            }
+            RoutePath = reader.ReadString();
 
             if (Version > 67)
             {

@@ -1,12 +1,9 @@
-﻿using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
+﻿using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
-using System.Windows.Forms;
 using Client.MirGraphics;
-using Microsoft.DirectX;
-using Microsoft.DirectX.Direct3D;
+using SlimDX;
+using SlimDX.Direct3D9;
 using Font = System.Drawing.Font;
 
 namespace Client.MirControls
@@ -64,7 +61,7 @@ namespace Client.MirControls
             get { return _font; }
             set
             {
-                _font = value;
+                _font = ScaleFont(value);
                 OnFontChanged(EventArgs.Empty);
             }
         }
@@ -180,7 +177,7 @@ namespace Client.MirControls
             DrawControlTexture = true;
             _drawFormat = TextFormatFlags.WordBreak;
 
-            _font = new Font(Settings.FontName, 8F);
+            _font = ScaleFont(new Font(Settings.FontName, 8F));
             _outLine = true;
             _outLineColour = Color.Black; 
             _text = string.Empty;
@@ -195,20 +192,19 @@ namespace Client.MirControls
             if (Size.Width == 0 || Size.Height == 0)
                 return;
 
-            if (ControlTexture != null && !ControlTexture.Disposed && TextureSize != Size)
-                ControlTexture.Dispose();
+            if (TextureSize != Size)
+                DisposeTexture();
 
             if (ControlTexture == null || ControlTexture.Disposed)
             {
                 DXManager.ControlList.Add(this);
 
                 ControlTexture = new Texture(DXManager.Device, Size.Width, Size.Height, 1, Usage.None, Format.A8R8G8B8, Pool.Managed);
-                ControlTexture.Disposing += ControlTexture_Disposing;
                 TextureSize = Size;
             }
-            
-            using (GraphicsStream stream = ControlTexture.LockRectangle(0, LockFlags.Discard))
-            using (Bitmap image = new Bitmap(Size.Width, Size.Height, Size.Width * 4, PixelFormat.Format32bppArgb, (IntPtr) stream.InternalDataPointer))
+
+            DataRectangle stream = ControlTexture.LockRectangle(0, LockFlags.Discard);
+            using (Bitmap image = new Bitmap(Size.Width, Size.Height, Size.Width * 4, PixelFormat.Format32bppArgb, stream.Data.DataPointer))
             {
                 using (Graphics graphics = Graphics.FromImage(image))
                 {
@@ -237,6 +233,7 @@ namespace Client.MirControls
                         TextRenderer.DrawText(graphics, Text, Font, new Rectangle(1, 0, Size.Width, Size.Height), ForeColour, DrawFormat);
                 }
             }
+
             ControlTexture.UnlockRectangle(0);
             DXManager.Sprite.Flush();
             TextureValid = true;
@@ -256,7 +253,11 @@ namespace Client.MirControls
             _drawFormat = 0;
 
             FontChanged = null;
-            _font = null;
+            if (_font != null)
+            {
+                _font.Dispose();
+                _font = null;
+            }
 
             OutLineChanged = null;
             _outLine = false;

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using Server.MirEnvir;
+﻿using Server.MirEnvir;
 using S = ServerPackets;
 
 namespace Server.MirDatabase
@@ -122,7 +117,7 @@ namespace Server.MirDatabase
             
             Info = GetMagicInfo(Spell);
         }
-        public UserMagic(BinaryReader reader)
+        public UserMagic(BinaryReader reader, int version, int customVersion)
         {
             Spell = (Spell) reader.ReadByte();
             Info = GetMagicInfo(Spell);
@@ -131,10 +126,10 @@ namespace Server.MirDatabase
             Key = reader.ReadByte();
             Experience = reader.ReadUInt16();
 
-            if (Envir.LoadVersion < 15) return;
+            if (version < 15) return;
             IsTempSpell = reader.ReadBoolean();
 
-            if (Envir.LoadVersion < 65) return;
+            if (version < 65) return;
             CastTime = reader.ReadInt64();
         }
         public void Save(BinaryWriter writer)
@@ -148,11 +143,12 @@ namespace Server.MirDatabase
             writer.Write(CastTime);
         }
 
-        public Packet GetInfo()
+        public Packet GetInfo(bool hero)
         {
             return new S.NewMagic
                 {
-                    Magic = CreateClientMagic()
+                    Magic = CreateClientMagic(),
+                    Hero = hero
                 };
         }
 
@@ -177,7 +173,7 @@ namespace Server.MirDatabase
                     IsTempSpell = IsTempSpell,
                     Delay = GetDelay(),
                     Range = Info.Range,
-                    CastTime = (CastTime != 0) && (Envir.Time > CastTime)? Envir.Time - CastTime: 0
+                    CastTime = CastTime - Envir.Time
             };
         }
 

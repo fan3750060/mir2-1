@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
-using Server.MirDatabase;
 using System.Drawing;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class DigOutZombie : MonsterObject
+    public class DigOutZombie : MonsterObject
     {
         public bool Visible, DoneDigOut;
         public long VisibleTime, DigOutTime;
@@ -40,7 +39,6 @@ namespace Server.MirObjects.Monsters
             Visible = false;
         }
 
-
         protected override void ProcessAI()
         {
             if (!Dead && Envir.Time > VisibleTime)
@@ -62,25 +60,30 @@ namespace Server.MirObjects.Monsters
                 }
             }
 
+            SpawnDigOutEffect();         
+
+            base.ProcessAI();
+        }
+
+        protected virtual void SpawnDigOutEffect()
+        {
             if (Visible && Envir.Time > DigOutTime + 1000 && !DoneDigOut)
             {
                 SpellObject ob = new SpellObject
-                    {
-                        Spell = Spell.DigOutZombie,
-                        Value = 1,
-                        ExpireTime = Envir.Time + (5 * 60 * 1000),
-                        TickSpeed = 2000,
-                        Caster = null,
-                        CurrentLocation = DigOutLocation,
-                        CurrentMap = this.CurrentMap,
-                        Direction = DigOutDirection
-                    };
+                {
+                    Spell = Spell.DigOutZombie,
+                    Value = 1,
+                    ExpireTime = Envir.Time + (5 * 60 * 1000),
+                    TickSpeed = 2000,
+                    Caster = null,
+                    CurrentLocation = DigOutLocation,
+                    CurrentMap = this.CurrentMap,
+                    Direction = DigOutDirection
+                };
                 CurrentMap.AddObject(ob);
                 ob.Spawned();
-                DoneDigOut = true;                    
+                DoneDigOut = true;
             }
-
-            base.ProcessAI();
         }
 
         public override bool Walk(MirDirection dir)
@@ -92,7 +95,7 @@ namespace Server.MirObjects.Monsters
         {
             return Visible && base.IsAttackTarget(attacker);
         }
-        public override bool IsAttackTarget(PlayerObject attacker)
+        public override bool IsAttackTarget(HumanObject attacker)
         {
             return Visible && base.IsAttackTarget(attacker);
         }
@@ -100,7 +103,9 @@ namespace Server.MirObjects.Monsters
         protected override void ProcessSearch()
         {
             if (Visible)
+            {
                 base.ProcessSearch();
+            }
         }
 
         public override Packet GetInfo()

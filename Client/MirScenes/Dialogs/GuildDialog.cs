@@ -1,24 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Windows.Forms;
-using Client.MirControls;
+﻿using Client.MirControls;
 using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirObjects;
 using Client.MirSounds;
-using Microsoft.DirectX.Direct3D;
 using Font = System.Drawing.Font;
-using S = ServerPackets;
 using C = ClientPackets;
-using Effect = Client.MirObjects.Effect;
-
-using Client.MirScenes.Dialogs;
-using System.Drawing.Imaging;
 
 namespace Client.MirScenes.Dialogs
 {
@@ -63,13 +49,13 @@ namespace Client.MirScenes.Dialogs
         public byte ItemCount;
         public byte BuffCount;
         public static int MyRankId;
-        public static RankOptions MyOptions;
-        public List<Rank> Ranks = new List<Rank>();
+        public static GuildRankOptions MyOptions;
+        public List<GuildRank> Ranks = new List<GuildRank>();
         public bool MembersChanged = true;
         public long LastMemberRequest = 0;
         public long LastGuildMsg = 0;
         public long LastRankNameChange = 0;
-        public RankOptions GetMyOptions()
+        public GuildRankOptions GetMyOptions()
         {
             return MyOptions;
         }
@@ -982,7 +968,7 @@ namespace Client.MirScenes.Dialogs
                     Error = "Insufficient points available.";
                 if (GameScene.Scene.GuildDialog.Level < BuffInfo.LevelRequirement)
                     Error = "Guild level too low.";
-                if (!GameScene.Scene.GuildDialog.GetMyOptions().HasFlag(RankOptions.CanActivateBuff))
+                if (!GameScene.Scene.GuildDialog.GetMyOptions().HasFlag(GuildRankOptions.CanActivateBuff))
                     Error = "Guild rank does not allow buff activation.";
                 if (Error != "")
                 {
@@ -1001,7 +987,7 @@ namespace Client.MirScenes.Dialogs
                     Error = "Buff is still active.";
                 if (GameScene.Scene.GuildDialog.Gold < BuffInfo.ActivationCost)
                     Error = "Insufficient guild funds.";
-                if (!GameScene.Scene.GuildDialog.GetMyOptions().HasFlag(RankOptions.CanActivateBuff))
+                if (!GameScene.Scene.GuildDialog.GetMyOptions().HasFlag(GuildRankOptions.CanActivateBuff))
                     Error = "Guild rank does not allow buff activation.";
                 if (Error != "")
                 {
@@ -1089,7 +1075,7 @@ namespace Client.MirScenes.Dialogs
                     }
                     Buffs[i].Visible = true;
                     GuildBuff Buff = FindGuildBuff(BuffInfo.Id);
-                    Buffs[i].Name.Text = BuffInfo.name;
+                    Buffs[i].Name.Text = BuffInfo.Name;
                     Buffs[i].Icon.Index = BuffInfo.Icon;
 
                     if (Buff == null)
@@ -1159,125 +1145,22 @@ namespace Client.MirScenes.Dialogs
         {
             string text = "";
 
-            byte BuffAc = 0, BuffMac = 0, BuffDc = 0, BuffMc = 0, BuffSc = 0, BuffAttack = 0,
-                BuffMineRate = 0, BuffGemRate = 0, BuffFishRate = 0, BuffExpRate = 0, BuffCraftRate = 0, BuffSkillRate = 0,
-                BuffHpRegen = 0, BuffMPRegen = 0, BuffDropRate = 0, BuffGoldRate = 0;
-
-            int BuffMaxHp = 0, BuffMaxMp = 0;
+            var stats = new Stats();
 
             foreach (GuildBuff buff in EnabledBuffs)
             {
                 if ((buff.Info == null) || (!buff.Active)) continue;
 
-                BuffAc = (byte)Math.Min(byte.MaxValue, BuffAc + buff.Info.BuffAc);
-                BuffMac = (byte)Math.Min(byte.MaxValue, BuffMac + buff.Info.BuffMac);
-                BuffDc = (byte)Math.Min(byte.MaxValue, BuffDc + buff.Info.BuffDc);
-                BuffMc = (byte)Math.Min(byte.MaxValue, BuffMc + buff.Info.BuffMc);
-                BuffSc = (byte)Math.Min(byte.MaxValue, BuffSc + buff.Info.BuffSc);
-                BuffAttack = (byte)Math.Min(byte.MaxValue, BuffAttack + buff.Info.BuffAttack);
-                BuffMaxHp = (ushort)Math.Min(ushort.MaxValue, BuffMaxHp + buff.Info.BuffMaxHp);
-                BuffMaxMp = (ushort)Math.Min(ushort.MaxValue, BuffMaxMp + buff.Info.BuffMaxMp);
-                BuffMineRate = (byte)Math.Min(byte.MaxValue, BuffMineRate + buff.Info.BuffMineRate);
-                BuffGemRate = (byte)Math.Min(byte.MaxValue, BuffGemRate + buff.Info.BuffGemRate);
-                BuffFishRate = (byte)Math.Min(byte.MaxValue, BuffFishRate + buff.Info.BuffFishRate);
-                BuffExpRate = (byte)Math.Min(float.MaxValue, BuffExpRate + buff.Info.BuffExpRate);
-                BuffCraftRate = (byte)Math.Min(byte.MaxValue, BuffCraftRate + buff.Info.BuffCraftRate); //needs coding
-                BuffSkillRate = (byte)Math.Min(byte.MaxValue, BuffSkillRate + buff.Info.BuffSkillRate);
-                BuffHpRegen = (byte)Math.Min(byte.MaxValue, BuffHpRegen + buff.Info.BuffHpRegen);
-                BuffMPRegen = (byte)Math.Min(byte.MaxValue, BuffMPRegen + buff.Info.BuffMPRegen);
-                BuffDropRate = (byte)Math.Min(float.MaxValue, BuffDropRate + buff.Info.BuffDropRate);
-                BuffGoldRate = (byte)Math.Min(float.MaxValue, BuffGoldRate + buff.Info.BuffGoldRate);
+                stats.Add(buff.Info.Stats);
             }
 
-            if (BuffAc > 0)
+            foreach (var val in stats.Values)
             {
-                text += string.Format("Increases AC by: 0-{0}.", BuffAc);
-                if (text != "") text += "\n";
-            }
-            if (BuffMac > 0)
-            {
-                text += string.Format("Increases MAC by: 0-{0}.", BuffMac);
-                if (text != "") text += "\n";
-            }
-            if (BuffDc > 0)
-            {
-                text += string.Format("Increases DC by: 0-{0}.", BuffDc);
-                if (text != "") text += "\n";
-            }
-            if (BuffMc > 0)
-            {
-                text += string.Format("Increases MC by: 0-{0}.", BuffMc);
-                if (text != "") text += "\n";
-            }
-            if (BuffSc > 0)
-            {
-                text += string.Format("Increases SC by: 0-{0}.", BuffSc);
-                if (text != "") text += "\n";
-            }
-            if (BuffMaxHp > 0)
-            {
-                text += string.Format("Increases Hp by: {0}.", BuffMaxHp);
-                if (text != "") text += "\n";
-            }
-            if (BuffMaxMp > 0)
-            {
-                text += string.Format("Increases MP by: {0}.", BuffMaxMp);
-                if (text != "") text += "\n";
-            }
-            if (BuffHpRegen > 0)
-            {
-                text += string.Format("Increases Health regen by: {0}.", BuffHpRegen);
-                if (text != "") text += "\n";
-            }
-            if (BuffMPRegen > 0)
-            {
-                text += string.Format("Increases Mana regen by: {0}.", BuffMPRegen);
-                if (text != "") text += "\n";
-            }
-            if (BuffMineRate > 0)
-            {
-                text += string.Format("Increases Mining success by: {0}%.", BuffMineRate * 5);
-                if (text != "") text += "\n";
-            }
-            if (BuffGemRate > 0)
-            {
-                text += string.Format("Increases Gem success by: {0}%.", BuffGemRate * 5);
-                if (text != "") text += "\n";
-            }
-            if (BuffFishRate > 0)
-            {
-                text += string.Format("Increases Fishing success by: {0}%.", BuffFishRate * 5);
-                if (text != "") text += "\n";
-            }
-            if (BuffExpRate > 0)
-            {
-                text += string.Format("Increases Experience by: {0}%.", BuffExpRate);
-                if (text != "") text += "\n";
-            }
-            if (BuffCraftRate > 0)
-            {
-                text += string.Format("Increases Crafting success by: {0}%.", BuffCraftRate * 5);
-                if (text != "") text += "\n";
-            }
-            if (BuffSkillRate > 0)
-            {
-                text += string.Format("Increases Skill training by: {0}.", BuffSkillRate);
-                if (text != "") text += "\n";
-            }
-            if (BuffAttack > 0)
-            {
-                text += string.Format("Increases Damage by: {0}.", BuffAttack);
-                if (text != "") text += "\n";
-            }
-            if (BuffDropRate > 0)
-            {
-                text += string.Format("Droprate increased by: {0}%.", BuffDropRate);
-                if (text != "") text += "\n";
-            }
-            if (BuffGoldRate > 0)
-            {
-                text += string.Format("Goldrate increased by: 0-{0}.", BuffGoldRate);
-                if (text != "") text += "\n";
+                var c = val.Value < 0 ? "Decreases" : "Increases";
+
+                var txt = $"{c} {val.Key} by: {val.Value}{(val.Key.ToString().Contains("Percent") ? "%" : "")}.\n";
+
+                text += txt;
             }
 
             ActiveStats = text;
@@ -1306,7 +1189,7 @@ namespace Client.MirScenes.Dialogs
                 Location = new Point(4, 4),
                 OutLine = true,
                 Parent = GameScene.Scene.GuildBuffLabel,
-                Text = Buff.name
+                Text = Buff.Name
             };
 
             GameScene.Scene.GuildBuffLabel.Size = new Size(Math.Max(GameScene.Scene.GuildBuffLabel.Size.Width, HintName.DisplayRectangle.Right + 4),
@@ -1389,17 +1272,17 @@ namespace Client.MirScenes.Dialogs
         #region ButtonResets
         public void ResetButtonStats()
         {
-            if (MyOptions.HasFlag(RankOptions.CanRetrieveItem) || MyOptions.HasFlag(RankOptions.CanStoreItem))
+            if (MyOptions.HasFlag(GuildRankOptions.CanRetrieveItem) || MyOptions.HasFlag(GuildRankOptions.CanStoreItem))
                 StorageButton.Visible = true;
             else
                 StorageButton.Visible = false;
 
-            if (MyOptions.HasFlag(RankOptions.CanChangeRank))
+            if (MyOptions.HasFlag(GuildRankOptions.CanChangeRank))
                 RankButton.Visible = true;
             else
                 RankButton.Visible = false;
 
-            if (MyOptions.HasFlag(RankOptions.CanChangeNotice))
+            if (MyOptions.HasFlag(GuildRankOptions.CanChangeNotice))
                 NoticeEditButton.Visible = true;
             else
                 NoticeEditButton.Visible = false;
@@ -1472,7 +1355,7 @@ namespace Client.MirScenes.Dialogs
 
         void NoticePositionBar_OnMoving(object sender, MouseEventArgs e)
         {
-            int x = 337;
+            //int x = 337;
             int y = NoticePositionBar.Location.Y;
             int TempIndex = 0;
             bool forward;
@@ -1566,7 +1449,7 @@ namespace Client.MirScenes.Dialogs
         #endregion
 
         #region MembersDialogCode
-        public void NewMembersList(List<Rank> NewRanks)
+        public void NewMembersList(List<GuildRank> NewRanks)
         {
             Ranks = NewRanks;
             MembersChanged = false;
@@ -1604,7 +1487,7 @@ namespace Client.MirScenes.Dialogs
         {
             for (int i = 0; i < Ranks.Count; i++)
                 for (int j = 0; j < Ranks[i].Members.Count; j++)
-                    if (Ranks[i].Members[j].name == name)
+                    if (Ranks[i].Members[j].Name == name)
                         Ranks[i].Members[j].Online = online;
             UpdateMembers();
         }
@@ -1625,7 +1508,7 @@ namespace Client.MirScenes.Dialogs
 
         public void AddMember()
         {
-            if (!MyOptions.HasFlag(RankOptions.CanRecruit)) return;
+            if (!MyOptions.HasFlag(GuildRankOptions.CanRecruit)) return;
             if (LastGuildMsg > CMain.Time) return;
             Network.Enqueue(new C.EditGuildMember { ChangeType = 0, Name = MembersRecruitName.Text });
             LastGuildMsg = CMain.Time + 5000;
@@ -1685,7 +1568,7 @@ namespace Client.MirScenes.Dialogs
             {
                 MembersDelete[i].Visible = false;
             }
-            if (MyOptions.HasFlag(RankOptions.CanRecruit))
+            if (MyOptions.HasFlag(GuildRankOptions.CanRecruit))
             {
                 RecruitMemberButton.Visible = true;
                 MembersRecruitName.Visible = true;
@@ -1700,7 +1583,7 @@ namespace Client.MirScenes.Dialogs
 
             int Offset = 0;
             int RowCount = 0;
-            DateTime now = DateTime.Now;
+            DateTime now = CMain.Now;
             for (int i = 0; i < Ranks.Count; i++)
                 for (int j = 0; j < Ranks[i].Members.Count; j++)
                 {
@@ -1713,16 +1596,16 @@ namespace Client.MirScenes.Dialogs
                     {
 
                         if ((!MembersShowOfflinesetting) && (Ranks[i].Members[j].Online == false)) continue;
-                        if ((MyOptions.HasFlag(RankOptions.CanChangeRank)) && (Ranks[i].Index >= MyRankId))
+                        if ((MyOptions.HasFlag(GuildRankOptions.CanChangeRank)) && (Ranks[i].Index >= MyRankId))
                             MembersRanks[RowCount].Enabled = true;
                         else
                             MembersRanks[RowCount].Enabled = false;
-                        if ((MyOptions.HasFlag(RankOptions.CanKick)) && (Ranks[i].Index >= MyRankId) && (Ranks[i].Members[j].name != MapControl.User.Name)/* && (Ranks[i].Index != 0)*/)
+                        if ((MyOptions.HasFlag(GuildRankOptions.CanKick)) && (Ranks[i].Index >= MyRankId) && (Ranks[i].Members[j].Name != MapControl.User.Name)/* && (Ranks[i].Index != 0)*/)
                             MembersDelete[RowCount].Visible = true;
                         else
                             MembersDelete[RowCount].Visible = false;
                         MembersRanks[RowCount].SelectedIndex = Ranks[i].Index;
-                        MembersName[RowCount].Text = Ranks[i].Members[j].name;
+                        MembersName[RowCount].Text = Ranks[i].Members[j].Name;
                         if (Ranks[i].Members[j].Online)
                             MembersStatus[RowCount].ForeColour = Color.LimeGreen;
                         else
@@ -1879,7 +1762,7 @@ namespace Client.MirScenes.Dialogs
         #endregion
 
         #region RankDialogCode
-        public void NewRankRecieved(Rank New)
+        public void NewRankRecieved(GuildRank New)
         {
             int NewIndex = Ranks.Count > 1 ? Ranks.Count - 1 : 1;
             Ranks.Insert(NewIndex, New);
@@ -1887,7 +1770,7 @@ namespace Client.MirScenes.Dialogs
             RefreshMemberList();
             UpdateRanks();
         }
-        public void MyRankChanged(Rank New)
+        public void MyRankChanged(GuildRank New)
         {
             MyOptions = New.Options;
 
@@ -1897,7 +1780,7 @@ namespace Client.MirScenes.Dialogs
             MyRankId = New.Index;
             if (OldRank >= Ranks.Count) return;
             for (int i = 0; i < Ranks[OldRank].Members.Count; i++)
-                if (Ranks[OldRank].Members[i].name == MapObject.User.Name)
+                if (Ranks[OldRank].Members[i].Name == MapObject.User.Name)
                 {
                     Member = Ranks[OldRank].Members[i];
                     Ranks[OldRank].Members.Remove(Member);
@@ -1917,14 +1800,14 @@ namespace Client.MirScenes.Dialogs
             UpdateMembers();
 
         }
-        public void RankChangeRecieved(Rank New)
+        public void RankChangeRecieved(GuildRank New)
         {
             for (int i = 0; i < Ranks.Count; i++)
                 if (Ranks[i].Index == New.Index)
                 {
                     if (Ranks[i].Name == MapObject.User.GuildRankName)
                         for (int j = 0; j < Ranks[i].Members.Count; j++)
-                            if (Ranks[i].Members[j].name == MapObject.User.Name)
+                            if (Ranks[i].Members[j].Name == MapObject.User.Name)
                             {
                                 MapObject.User.GuildRankName = New.Name;
                                 MyOptions = New.Options;
@@ -1965,7 +1848,7 @@ namespace Client.MirScenes.Dialogs
                 LastRankNameChange = long.MaxValue;
             for (int i = 0; i < RanksOptionsStatus.Length; i++)
             {
-                if (Ranks[RanksSelectBox.SelectedIndex].Options.HasFlag((RankOptions)(1 << i)))
+                if (Ranks[RanksSelectBox.SelectedIndex].Options.HasFlag((GuildRankOptions)(1 << i)))
                     RanksOptionsStatus[i].Visible = true;
                 else
                     RanksOptionsStatus[i].Visible = false;
@@ -2229,23 +2112,23 @@ namespace Client.MirScenes.Dialogs
                     break;
             }
         }
-        public void StatusChanged(RankOptions status)
+        public void StatusChanged(GuildRankOptions status)
         {
             Notice.Enabled = false;
             NoticeEditButton.Index = 85;
             MyOptions = status;
 
-            if (MyOptions.HasFlag(RankOptions.CanChangeNotice))
+            if (MyOptions.HasFlag(GuildRankOptions.CanChangeNotice))
                 NoticeEditButton.Visible = true;
             else
                 NoticeEditButton.Visible = false;
 
-            if (MyOptions.HasFlag(RankOptions.CanChangeRank))
+            if (MyOptions.HasFlag(GuildRankOptions.CanChangeRank))
                 RankButton.Visible = true;
             else
                 RankButton.Visible = false;
 
-            if ((MyOptions.HasFlag(RankOptions.CanStoreItem)) || (MyOptions.HasFlag(RankOptions.CanRetrieveItem)))
+            if ((MyOptions.HasFlag(GuildRankOptions.CanStoreItem)) || (MyOptions.HasFlag(GuildRankOptions.CanRetrieveItem)))
                 StorageButton.Visible = true;
             else
                 StorageButton.Visible = false;
@@ -2257,12 +2140,8 @@ namespace Client.MirScenes.Dialogs
         #endregion
 
         #region GuildDialogChecks
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
-        public void Show()
+
+        public override void Show()
         {
             if (Visible) return;
 

@@ -2,13 +2,6 @@
 using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirSounds;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
@@ -263,17 +256,6 @@ namespace Client.MirScenes.Dialogs
 
 
 
-        }
-
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
-        public void Show()
-        {
-            if (Visible) return;
-            Visible = true;
         }
 
         public void UpdateInterface()

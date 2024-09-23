@@ -1,6 +1,5 @@
-﻿using System;
 using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -27,6 +26,7 @@ namespace Server.MirObjects.Monsters
         {
             NameColour = Color.SkyBlue;
         }
+
         public override void Spawned()
         {
             if (Respawn != null && Respawn.Info.Direction < 8)
@@ -51,9 +51,9 @@ namespace Server.MirObjects.Monsters
                 base.ProcessRoam();
         }
 
-        public override bool IsAttackTarget(PlayerObject attacker) { return false; }
+        public override bool IsAttackTarget(HumanObject attacker) { return false; }
         public override bool IsAttackTarget(MonsterObject attacker) { return false; }
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true) { throw new NotSupportedException(); }
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true) { throw new NotSupportedException(); }
         public override int Attacked(MonsterObject attacker, int damage, DefenceType type = DefenceType.ACAgility) { throw new NotSupportedException(); }
         public override int Struck(int damage, DefenceType type = DefenceType.ACAgility)
         {
@@ -76,13 +76,14 @@ namespace Server.MirObjects.Monsters
             ActionTime = Envir.Time + 500;
             AttackTime = Envir.Time + AttackSpeed;
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
 
             if (Target.Race != ObjectType.Player) damage = int.MaxValue;
 
             if (damage == 0) return;
 
-            Target.Attacked(this, damage, DefenceType.AC);
+            DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target, damage, DefenceType.AC);
+            ActionList.Add(action);
         }
     }
 }

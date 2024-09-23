@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Server
 {
     public partial class NPCInfoForm : Form
     {
-        public string NPCListPath = Path.Combine(Settings.ExportPath, "NPCList.txt");
+        public string NPCListPath = Path.Combine(Settings.ExportPath, "NPCList.csv");
 
         public Envir Envir => SMain.EditEnvir;
 
@@ -24,16 +19,16 @@ namespace Server
 
             for (int i = 0; i < Envir.MapInfoList.Count; i++) MapComboBox.Items.Add(Envir.MapInfoList[i]);
 
-            if (ConquestHidden_combo.Items.Count != Envir.ConquestInfos.Count)
+            if (ConquestHidden_combo.Items.Count != Envir.ConquestInfoList.Count)
             {
                 ConquestHidden_combo.Items.Clear();
 
-                for (int i = 0; i < Envir.ConquestInfos.Count; i++)
+                ConquestHidden_combo.Items.Add("");
+                for (int i = 0; i < Envir.ConquestInfoList.Count; i++)
                 {
-                    ConquestHidden_combo.Items.Add(Envir.ConquestInfos[i]);
+                    ConquestHidden_combo.Items.Add(Envir.ConquestInfoList[i]);
                 }
             }
-
 
             UpdateInterface();
         }
@@ -91,6 +86,9 @@ namespace Server
                 StartMin_num.Value = 0;
                 EndMin_num.Value = 1;
                 Flag_textbox.Text = string.Empty;
+                ShowBigMapCheckBox.Checked = false;
+                BigMapIconTextBox.Text = string.Empty;
+                ConquestVisible_checkbox.Checked = true;
                 return;
             }
 
@@ -110,7 +108,7 @@ namespace Server
             MinLev_textbox.Text = info.MinLev.ToString();
             MaxLev_textbox.Text = info.MaxLev.ToString();
             Class_combo.Text = info.ClassRequired;
-            ConquestHidden_combo.SelectedItem = Envir.ConquestInfos.FirstOrDefault(x => x.Index == info.Conquest);
+            ConquestHidden_combo.SelectedItem = Envir.ConquestInfoList.FirstOrDefault(x => x.Index == info.Conquest);
             Day_combo.Text = info.DayofWeek;
             TimeVisible_checkbox.Checked = info.TimeVisible;
             StartHour_combo.Text = info.HourStart.ToString();
@@ -118,6 +116,11 @@ namespace Server
             StartMin_num.Value = info.MinuteStart;
             EndMin_num.Value = info.MinuteEnd;
             Flag_textbox.Text = info.FlagNeeded.ToString();
+            ShowBigMapCheckBox.Checked = info.ShowOnBigMap;
+            BigMapIconTextBox.Text = info.BigMapIcon.ToString();
+            TeleportToCheckBox.Checked = info.CanTeleportTo;
+            ConquestVisible_checkbox.Checked = info.ConquestVisible;
+            LoadImage(info.Image);
 
 
             for (int i = 1; i < _selectedNPCInfos.Count; i++)
@@ -131,6 +134,7 @@ namespace Server
                 if (NYTextBox.Text != info.Location.Y.ToString()) NYTextBox.Text = string.Empty;
                 if (NImageTextBox.Text != info.Image.ToString()) NImageTextBox.Text = string.Empty;
                 if (NRateTextBox.Text != info.Rate.ToString()) NRateTextBox.Text = string.Empty;
+                if (BigMapIconTextBox.Text != info.BigMapIcon.ToString()) BigMapIconTextBox.Text = string.Empty;
             }
         }
 
@@ -151,7 +155,35 @@ namespace Server
 
         private void NPCInfoListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_selectedNPCInfos.Count > 0)
+            {
+                NPCInfo info = _selectedNPCInfos[0];
+                LoadImage(info.Image);
+            }
+            else
+            {
+                LoadImage(0);
+            }
+
             UpdateInterface();
+
+        }
+        private void LoadImage(ushort imageValue)
+        {
+            string filename = $"{imageValue}.bmp";
+            string imagePath = Path.Combine(Environment.CurrentDirectory, "Envir", "Previews", "NPC", filename);
+
+            if (File.Exists(imagePath))
+            {
+                using (FileStream fs = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
+                {
+                    NPCPreview.Image = Image.FromStream(fs);
+                }
+            }
+            else
+            {
+                NPCPreview.Image = null;
+            }
         }
 
         private void NFileNameTextBox_TextChanged(object sender, EventArgs e)
@@ -225,6 +257,7 @@ namespace Server
             for (int i = 0; i < _selectedNPCInfos.Count; i++)
                 _selectedNPCInfos[i].Image = temp;
 
+            LoadImage(temp);
         }
         private void NRateTextBox_TextChanged(object sender, EventArgs e)
         {
@@ -275,7 +308,7 @@ namespace Server
             }
 
 
-            string[] npcs = data.Split(new[] {'\t'}, StringSplitOptions.RemoveEmptyEntries);
+            string[] npcs = data.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
 
             //for (int i = 1; i < npcs.Length; i++)
@@ -302,7 +335,7 @@ namespace Server
 
             SaveFileDialog sfd = new SaveFileDialog();
             sfd.InitialDirectory = Path.Combine(Application.StartupPath, "Exports");
-            sfd.Filter = "Text File|*.txt";
+            sfd.Filter = "CSV File|*.csv";
             sfd.ShowDialog();
 
             if (sfd.FileName == string.Empty) return;
@@ -322,7 +355,7 @@ namespace Server
             string Path = string.Empty;
 
             OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Text File|*.txt";
+            ofd.Filter = "CSV File|*.csv";
             ofd.ShowDialog();
 
             if (ofd.FileName == string.Empty) return;
@@ -357,12 +390,15 @@ namespace Server
             var scriptPath = Path.Combine(Settings.NPCPath, NFileNameTextBox.Text + ".txt");
 
             if (File.Exists(scriptPath))
-                Process.Start(scriptPath);
+            {
+                Shared.Helpers.FileIO.OpenScript(scriptPath, true);
+            }
+
             else
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(scriptPath));
                 File.Create(scriptPath).Close();
-                Process.Start(scriptPath);
+                Shared.Helpers.FileIO.OpenScript(scriptPath, true);
             }
         }
 
@@ -430,7 +466,7 @@ namespace Server
 
         private void CopyMButton_Click(object sender, EventArgs e)
         {
-            MessageBox.Show(DateTime.Now.DayOfWeek.ToString());
+            MessageBox.Show(Envir.Now.DayOfWeek.ToString());
         }
 
         private void MaxLev_textbox_TextChanged(object sender, EventArgs e)
@@ -542,7 +578,7 @@ namespace Server
 
         private void dateTimePicker1_ValueChanged(object sender, EventArgs e)
         {
-            MessageBox.Show(DateTime.Now.TimeOfDay.ToString());
+            MessageBox.Show(Envir.Now.TimeOfDay.ToString());
         }
 
         private void NPCInfoForm_Load(object sender, EventArgs e)
@@ -553,10 +589,58 @@ namespace Server
         private void ConquestHidden_combo_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            ConquestInfo temp = (ConquestInfo)ConquestHidden_combo.SelectedItem;
+
+            int conquestIndex = 0;
+
+            if (ConquestHidden_combo.SelectedItem is ConquestInfo conquestInfo)
+            {
+                conquestIndex = conquestInfo.Index;
+            }
 
             for (int i = 0; i < _selectedNPCInfos.Count; i++)
-                _selectedNPCInfos[i].Conquest = temp.Index;
+                _selectedNPCInfos[i].Conquest = conquestIndex;
+        }
+
+        private void ShowBigMapCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender) return;
+
+            for (int i = 0; i < _selectedNPCInfos.Count; i++)
+                _selectedNPCInfos[i].ShowOnBigMap = ShowBigMapCheckBox.Checked;
+        }
+
+        private void BigMapIconTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender) return;
+
+            int temp;
+
+            if (!int.TryParse(ActiveControl.Text, out temp))
+            {
+                ActiveControl.BackColor = Color.Red;
+                return;
+            }
+            ActiveControl.BackColor = SystemColors.Window;
+
+
+            for (int i = 0; i < _selectedNPCInfos.Count; i++)
+                _selectedNPCInfos[i].BigMapIcon = temp;
+        }
+
+        private void TeleportToCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender) return;
+
+            for (int i = 0; i < _selectedNPCInfos.Count; i++)
+                _selectedNPCInfos[i].CanTeleportTo = TeleportToCheckBox.Checked;
+        }
+
+        private void ConquestVisible_checkbox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender) return;
+
+            for (int i = 0; i < _selectedNPCInfos.Count; i++)
+                _selectedNPCInfos[i].ConquestVisible = ConquestVisible_checkbox.Checked;
         }
     }
 }

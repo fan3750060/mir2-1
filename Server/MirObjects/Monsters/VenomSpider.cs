@@ -1,5 +1,3 @@
-using System;
-using System.Drawing;
 using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
@@ -23,98 +21,41 @@ namespace Server.MirObjects.Monsters
 
             if (x > 2 || y > 2) return false;
 
-
             return (x <= 1 && y <= 1) || (x == y || x % 2 == y % 2);
         }
 
         protected override void Attack()
         {
-
             if (!Target.IsAttackTarget(this))
             {
                 Target = null;
                 return;
             }
 
-            Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
-            Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
-            LineAttack(2);
-
-
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
             ShockTime = 0;
 
+            Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
+            Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
 
-        }
-
-        private void LineAttack(int distance)
-        {
-
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
-            for (int i = 1; i <= distance; i++)
-            {
-                Point target = Functions.PointMove(CurrentLocation, Direction, i);
+            LineAttack(damage, 2, 300, DefenceType.MACAgility);
+        }
 
-                if (target == Target.CurrentLocation)
-                {
-                    if (Target.Attacked(this, damage, DefenceType.MACAgility) > 0 && Envir.Random.Next(8) == 0)
-                    {
-                        if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                        {
-                            int poison = GetAttackPower(MinSC, MaxSC);
+        protected override void CompleteAttack(IList<object> data)
+        {
+            MapObject target = (MapObject)data[0];
+            int damage = (int)data[1];
+            DefenceType defence = (DefenceType)data[2];
 
-                            Target.ApplyPoison(new Poison
-                            {
-                                Owner = this,
-                                Duration = 5,
-                                PType = PoisonType.Green,
-                                Value = poison,
-                                TickSpeed = 2000
-                            }, this);
-                        }
-                    }
-                }
-                else
-                {
-                    if (!CurrentMap.ValidPoint(target)) continue;
+            if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
 
-                    Cell cell = CurrentMap.GetCell(target);
-                    if (cell.Objects == null) continue;
+            if (target.Attacked(this, damage, defence) <= 0) return;
 
-                    for (int o = 0; o < cell.Objects.Count; o++)
-                    {
-                        MapObject ob = cell.Objects[o];
-                        if (ob.Race == ObjectType.Monster || ob.Race == ObjectType.Player)
-                        {
-                            if (!ob.IsAttackTarget(this)) continue;
-
-                            if (ob.Attacked(this, damage, DefenceType.MACAgility) > 0 && Envir.Random.Next(8) == 0)
-                            {
-                                if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                                {
-                                    int poison = GetAttackPower(MinSC, MaxSC);
-
-                                    ob.ApplyPoison(new Poison
-                                    {
-                                        Owner = this,
-                                        Duration = 5,
-                                        PType = PoisonType.Green,
-                                        Value = poison,
-                                        TickSpeed = 2000
-                                    }, this);
-                                }
-                            }
-                        }
-                        else continue;
-
-                        break;
-                    }
-
-                }
-            }
+            PoisonTarget(target, 8, 5, PoisonType.Green, 1000);
         }
     }
 }

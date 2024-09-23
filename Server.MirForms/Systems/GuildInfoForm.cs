@@ -1,7 +1,5 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
-using Server.MirEnvir;
+﻿using Server.MirEnvir;
+using Server.MirObjects;
 
 namespace Server
 {
@@ -44,6 +42,8 @@ namespace Server
             GuildExpratetextBox.Text = Settings.Guild_ExpRate.ToString();
             WarLengthTextBox.Text = Settings.Guild_WarTime.ToString();
             WarCostTextBox.Text = Settings.Guild_WarCost.ToString();
+            NewbieGuildExptextBox.Text = Settings.NewbieGuildExpBuff.ToString();
+            NewbieGuildBuffEnabledcheckBox.Checked = Settings.NewbieGuildBuffEnabled;
 
             if ((GuildLevelListcomboBox.SelectedItem == null) || (GuildLevelListcomboBox.SelectedIndex >= Settings.Guild_ExperienceList.Count) || (GuildLevelListcomboBox.SelectedIndex >= Settings.Guild_MembercapList.Count))
             {
@@ -103,39 +103,60 @@ namespace Server
                 SelectedBuff  = (GuildBuffInfo)BuffList.SelectedItem;
                 BuffPanel.Enabled = true;
                 BufflblIndex.Text = $"Index:  {SelectedBuff.Id}";
-                BufftxtName.Text = SelectedBuff.name;
+                BufftxtName.Text = SelectedBuff.Name;
                 BuffTxtLevelReq.Text = SelectedBuff.LevelRequirement.ToString();
                 BufftxtPointsReq.Text = SelectedBuff.PointsRequirement.ToString();
                 BufftxtTimeLimit.Text = SelectedBuff.TimeLimit.ToString();
                 BufftxtActivationCost.Text = SelectedBuff.ActivationCost.ToString();
                 bufftxtIcon.Text = SelectedBuff.Icon.ToString();
-                BufftxtAc.Text = SelectedBuff.BuffAc.ToString();
-                BufftxtMac.Text = SelectedBuff.BuffMac.ToString();
-                BufftxtDc.Text = SelectedBuff.BuffDc.ToString();
-                BufftxtMc.Text = SelectedBuff.BuffMc.ToString();
-                BufftxtSc.Text = SelectedBuff.BuffSc.ToString();
-                BufftxtAttack.Text = SelectedBuff.BuffAttack.ToString();
-                BufftxtHpRegen.Text = SelectedBuff.BuffHpRegen.ToString();
-                BufftxtMpRegen.Text = SelectedBuff.BuffMPRegen.ToString();
-                BufftxtMaxHp.Text = SelectedBuff.BuffMaxHp.ToString();
-                BufftxtMaxMp.Text = SelectedBuff.BuffMaxMp.ToString();
-                BufftxtMineRate.Text = SelectedBuff.BuffMineRate.ToString();
-                BufftxtGemRate.Text = SelectedBuff.BuffGemRate.ToString();
-                BufftxtFishRate.Text = SelectedBuff.BuffFishRate.ToString();
-                BufftxtExpRate.Text = SelectedBuff.BuffExpRate.ToString();
-                BufftxtCraftRate.Text = SelectedBuff.BuffCraftRate.ToString();
-                BufftxtSkillRate.Text = SelectedBuff.BuffSkillRate.ToString();
-                BufftxtDropRate.Text = SelectedBuff.BuffDropRate.ToString();
-                BufftxtGoldRate.Text = SelectedBuff.BuffGoldRate.ToString();
+                BufftxtAc.Text = SelectedBuff.Stats[Stat.MaxAC].ToString();
+                BufftxtMac.Text = SelectedBuff.Stats[Stat.MaxMAC].ToString();
+                BufftxtDc.Text = SelectedBuff.Stats[Stat.MaxDC].ToString();
+                BufftxtMc.Text = SelectedBuff.Stats[Stat.MaxMC].ToString();
+                BufftxtSc.Text = SelectedBuff.Stats[Stat.MaxSC].ToString();
+                BufftxtAttack.Text = SelectedBuff.Stats[Stat.AttackBonus].ToString();
+                BufftxtHpRegen.Text = SelectedBuff.Stats[Stat.HealthRecovery].ToString();
+                BufftxtMpRegen.Text = SelectedBuff.Stats[Stat.SpellRecovery].ToString();
+                BufftxtMaxHp.Text = SelectedBuff.Stats[Stat.HP].ToString();
+                BufftxtMaxMp.Text = SelectedBuff.Stats[Stat.MP].ToString();
+                BufftxtMineRate.Text = SelectedBuff.Stats[Stat.MineRatePercent].ToString();
+                BufftxtGemRate.Text = SelectedBuff.Stats[Stat.GemRatePercent].ToString();
+                BufftxtFishRate.Text = SelectedBuff.Stats[Stat.FishRatePercent].ToString();
+                BufftxtExpRate.Text = SelectedBuff.Stats[Stat.ExpRatePercent].ToString();
+                BufftxtCraftRate.Text = SelectedBuff.Stats[Stat.CraftRatePercent].ToString();
+                BufftxtSkillRate.Text = SelectedBuff.Stats[Stat.SkillGainMultiplier].ToString();
+                BufftxtDropRate.Text = SelectedBuff.Stats[Stat.ItemDropRatePercent].ToString();
+                BufftxtGoldRate.Text = SelectedBuff.Stats[Stat.GoldDropRatePercent].ToString();
             }
+        }
+
+        private void NewbieGuildExptextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender) return;
+
+            if (!int.TryParse(ActiveControl.Text, out int temp))
+            {
+                ActiveControl.BackColor = Color.Red;
+                return;
+            }
+            ActiveControl.BackColor = SystemColors.Window;
+            Settings.NewbieGuildExpBuff = temp;
+            GuildsChanged = true;
+        }
+
+        private void NewbieGuildBuffEnabledcheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ActiveControl != sender) return;
+
+            Settings.NewbieGuildBuffEnabled = NewbieGuildBuffEnabledcheckBox.Checked;
+            GuildsChanged = true;
         }
 
         private void GuildMinOwnerLeveltextBox_TextChanged(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            byte temp;
 
-            if (!byte.TryParse(ActiveControl.Text, out temp))
+            if (!byte.TryParse(ActiveControl.Text, out byte temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -148,9 +169,8 @@ namespace Server
         private void GuildPPLtextBox_TextChanged(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            byte temp;
 
-            if (!byte.TryParse(ActiveControl.Text, out temp))
+            if (!byte.TryParse(ActiveControl.Text, out byte temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -163,9 +183,8 @@ namespace Server
         private void GuildExpratetextBox_TextChanged(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            byte temp;
 
-            if (!byte.TryParse(ActiveControl.Text, out temp))
+            if (!byte.TryParse(ActiveControl.Text, out byte temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -184,7 +203,7 @@ namespace Server
         private void GuildAddCreatItembutton_Click(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            Settings.Guild_CreationCostList.Add(new ItemVolume());
+            Settings.Guild_CreationCostList.Add(new GuildItemVolume());
             GuildCreateListcomboBox.Items.Add(Settings.Guild_CreationCostList.Count - 1);
             GuildCreateListcomboBox.SelectedIndex = Settings.Guild_CreationCostList.Count - 1;
             UpdateGuildInterface();
@@ -225,9 +244,8 @@ namespace Server
         {
             if (ActiveControl != sender) return;
             if (GuildLevelListcomboBox.SelectedItem == null) return;
-            uint temp;
 
-            if (!uint.TryParse(ActiveControl.Text, out temp))
+            if (!uint.TryParse(ActiveControl.Text, out uint temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -272,9 +290,8 @@ namespace Server
         {
             if (ActiveControl != sender) return;
             if (GuildLevelListcomboBox.SelectedItem == null) return;
-            long temp;
 
-            if (!long.TryParse(ActiveControl.Text, out temp))
+            if (!long.TryParse(ActiveControl.Text, out long temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -290,9 +307,8 @@ namespace Server
         {
             if (ActiveControl != sender) return;
             if (GuildLevelListcomboBox.SelectedItem == null) return;
-            int temp;
 
-            if (!int.TryParse(ActiveControl.Text, out temp))
+            if (!int.TryParse(ActiveControl.Text, out int temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -308,9 +324,8 @@ namespace Server
         private void WarLengthTextBox_TextChanged(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            long temp;
 
-            if (!long.TryParse(ActiveControl.Text, out temp))
+            if (!long.TryParse(ActiveControl.Text, out long temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -323,9 +338,8 @@ namespace Server
         private void WarCostTextBox_TextChanged(object sender, EventArgs e)
         {
             if (ActiveControl != sender) return;
-            uint temp;
 
-            if (!uint.TryParse(ActiveControl.Text, out temp))
+            if (!uint.TryParse(ActiveControl.Text, out uint temp))
             {
                 ActiveControl.BackColor = Color.Red;
                 return;
@@ -377,9 +391,13 @@ namespace Server
             for (int i = 0; i < Settings.Guild_BuffList.Count; i++)
                 if (Index < Settings.Guild_BuffList[i].Id)
                     Index = Settings.Guild_BuffList[i].Id;
-            GuildBuffInfo NewBuff = new GuildBuffInfo();
-            NewBuff.Id = ++Index;
-            NewBuff.name = "Buff " + Index.ToString();
+
+            GuildBuffInfo NewBuff = new GuildBuffInfo
+            {
+                Id = ++Index,
+                Name = "Buff " + Index.ToString()
+            };
+
             Settings.Guild_BuffList.Add(NewBuff);
             BuffList.Items.Add(NewBuff);
             GuildsChanged = true;   
@@ -406,7 +424,7 @@ namespace Server
                 return;
             }
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.name = ActiveControl.Text;
+            SelectedBuff.Name = ActiveControl.Text;
             GuildsChanged = true;
         }
 
@@ -458,7 +476,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffAc = temp;
+            SelectedBuff.Stats[Stat.MaxAC] = temp;
             GuildsChanged = true;
         }
 
@@ -467,7 +485,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffMac = temp;
+            SelectedBuff.Stats[Stat.MaxMAC] = temp;
             GuildsChanged = true;
         }
 
@@ -476,7 +494,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffDc = temp;
+            SelectedBuff.Stats[Stat.MaxDC] = temp;
             GuildsChanged = true;
         }
 
@@ -485,7 +503,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffMc = temp;
+            SelectedBuff.Stats[Stat.MaxMC] = temp;
             GuildsChanged = true;
         }
 
@@ -494,7 +512,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffSc = temp;
+            SelectedBuff.Stats[Stat.MaxSC] = temp;
             GuildsChanged = true;
         }
 
@@ -503,7 +521,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffAttack = temp;
+            SelectedBuff.Stats[Stat.AttackBonus] = temp;
             GuildsChanged = true;
         }
 
@@ -512,7 +530,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffMaxHp = temp;
+            SelectedBuff.Stats[Stat.HP] = temp;
             GuildsChanged = true;
         }
 
@@ -521,7 +539,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffMaxMp = temp;
+            SelectedBuff.Stats[Stat.MP] = temp;
             GuildsChanged = true;
         }
 
@@ -530,7 +548,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffHpRegen = temp;
+            SelectedBuff.Stats[Stat.HealthRecovery] = temp;
             GuildsChanged = true;
         }
 
@@ -539,7 +557,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffMPRegen = temp;
+            SelectedBuff.Stats[Stat.SpellRecovery] = temp;
             GuildsChanged = true;
         }
 
@@ -548,7 +566,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffMineRate = temp;
+            SelectedBuff.Stats[Stat.MineRatePercent] = temp;
             GuildsChanged = true;
         }
 
@@ -557,7 +575,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffGemRate = temp;
+            SelectedBuff.Stats[Stat.GemRatePercent] = temp;
             GuildsChanged = true;
         }
 
@@ -566,7 +584,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffFishRate = temp;
+            SelectedBuff.Stats[Stat.FishRatePercent] = temp;
             GuildsChanged = true;
         }
 
@@ -575,7 +593,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffExpRate = temp;
+            SelectedBuff.Stats[Stat.ExpRatePercent] = temp;
             GuildsChanged = true;
         }
 
@@ -584,7 +602,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffCraftRate = temp;
+            SelectedBuff.Stats[Stat.CraftRatePercent] = temp;
             GuildsChanged = true;
         }
 
@@ -593,7 +611,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffSkillRate = temp;
+            SelectedBuff.Stats[Stat.SkillGainMultiplier] = temp;
             GuildsChanged = true;
         }
 
@@ -602,7 +620,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffDropRate = temp;
+            SelectedBuff.Stats[Stat.ItemDropRatePercent] = temp;
             GuildsChanged = true;
         }
 
@@ -611,7 +629,7 @@ namespace Server
             byte temp = 0;
             if (!IsValid(ref temp, sender)) return;
             ActiveControl.BackColor = SystemColors.Window;
-            SelectedBuff.BuffGoldRate = temp;
+            SelectedBuff.Stats[Stat.GoldDropRatePercent] = temp;
             GuildsChanged = true;
         }
 

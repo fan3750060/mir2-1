@@ -1,13 +1,5 @@
 ﻿using Client.MirControls;
 using Client.MirGraphics;
-using Client.MirSounds;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Windows.Forms;
 
 namespace Client.MirScenes.Dialogs
 {
@@ -83,18 +75,6 @@ namespace Client.MirScenes.Dialogs
 
             Show();
             CurrentTime = CMain.Time + ViewTime;
-        }
-
-        public void Show()
-        {
-            if (Visible) return;
-            Visible = true;
-        }
-
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
         }
     }
 }

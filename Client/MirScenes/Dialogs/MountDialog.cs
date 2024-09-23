@@ -3,13 +3,6 @@ using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirObjects;
 using Client.MirSounds;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using C = ClientPackets;
 
 namespace Client.MirScenes.Dialogs
@@ -244,13 +237,7 @@ namespace Client.MirScenes.Dialogs
             Network.Enqueue(new C.Chat { Message = "@ride" });
         }
 
-
-        public void Hide()
-        {
-            if (!Visible) return;
-            Visible = false;
-        }
-        public void Show()
+        public override void Show()
         {
             if (Visible) return;
             if (GameScene.User.MountType < 0)

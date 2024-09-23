@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using Client.MirControls;
+﻿using Client.MirControls;
 using Client.MirGraphics;
 using Client.MirSounds;
-using System.Drawing;
 using System.Globalization;
-using System.Windows.Forms;
 using Client.MirNetwork;
 
 using C = ClientPackets;
@@ -15,7 +11,7 @@ namespace Client.MirScenes.Dialogs
     public sealed class ItemRentalDialog : MirImageControl
     {
         private readonly ItemRow[] _itemRows = new ItemRow[3];
-        private DateTime _lastRequestTime = DateTime.Now;
+        private DateTime _lastRequestTime = CMain.Now;
 
         public ItemRentalDialog()
         {

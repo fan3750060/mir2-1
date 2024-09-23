@@ -1,6 +1,4 @@
 ﻿using Server.MirDatabase;
-using System.Collections.Generic;
-using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
@@ -21,19 +19,9 @@ namespace Server.MirObjects.Monsters
 
             if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
 
-            if(target.Attacked(this, damage, defence) > 0)
-            {
-                if (Envir.Random.Next(Settings.PoisonResistWeight) >= target.PoisonResist)
-                {
-                    target.ApplyPoison(new Poison
-                    {
-                        Owner = this,
-                        Duration = GetAttackPower(MinMC, MaxMC),
-                        PType = PoisonType.Slow,
-                        TickSpeed = 1000,
-                    }, this);
-                }
-            }
+            if (target.Attacked(this, damage, defence) <= 0) return;
+
+            PoisonTarget(target, 1, GetAttackPower(Stats[Stat.MinMC], Stats[Stat.MaxMC]), PoisonType.Slow, 1000);
         }
 
         protected override void ProcessTarget()

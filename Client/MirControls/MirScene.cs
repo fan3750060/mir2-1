@@ -1,11 +1,8 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
-using Client.MirGraphics;
+﻿using Client.MirGraphics;
 using Client.MirNetwork;
 using Client.MirScenes;
-using Microsoft.DirectX.Direct3D;
+using SlimDX.Direct3D9;
 using S = ServerPackets;
-using C = ClientPackets;
 
 namespace Client.MirControls
 {
@@ -16,14 +13,12 @@ namespace Client.MirControls
         private static MouseButtons _buttons;
         private static long _lastClickTime;
         private static MirControl _clickedControl;
-        //private bool _redraw;
 
         protected MirScene()
         {
             DrawControlTexture = true;
             BackColour = Color.Magenta;
             Size = new Size(Settings.ScreenWidth, Settings.ScreenHeight);
-
         }
 
         public override sealed Size Size
@@ -31,7 +26,6 @@ namespace Client.MirControls
             get { return base.Size; }
             set { base.Size = value; }
         }
-
 
         public override void Draw()
         {
@@ -53,20 +47,18 @@ namespace Client.MirControls
 
         protected override void CreateTexture()
         {
-            if (ControlTexture != null && !ControlTexture.Disposed && Size != TextureSize)
-                ControlTexture.Dispose();
+            if (Size != TextureSize)
+                DisposeTexture();
 
             if (ControlTexture == null || ControlTexture.Disposed)
             {
                 DXManager.ControlList.Add(this);
                 ControlTexture = new Texture(DXManager.Device, Size.Width, Size.Height, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default);
-                ControlTexture.Disposing += ControlTexture_Disposing;
                 TextureSize = Size;
             }
             Surface oldSurface = DXManager.CurrentSurface;
             Surface surface = ControlTexture.GetSurfaceLevel(0);
             DXManager.SetSurface(surface);
-
 
             DXManager.Device.Clear(ClearFlags.Target, BackColour, 0, 0);
 
@@ -80,7 +72,6 @@ namespace Client.MirControls
             DXManager.SetSurface(oldSurface);
             TextureValid = true;
             surface.Dispose();
-
         }
 
         public override void OnMouseDown(MouseEventArgs e)
@@ -148,6 +139,7 @@ namespace Client.MirControls
             _lastClickTime = CMain.Time;
             _buttons = e.Button;
         }
+
         public override void OnMouseDoubleClick(MouseEventArgs e)
         {
             if (!Enabled)
@@ -187,11 +179,17 @@ namespace Client.MirControls
                 case (short)ServerPacketIds.NewItemInfo:
                     NewItemInfo((S.NewItemInfo) p);
                     break;
+                case (short)ServerPacketIds.NewChatItem:
+                    NewChatItem((S.NewChatItem)p);
+                    break;
                 case (short)ServerPacketIds.NewQuestInfo:
                     NewQuestInfo((S.NewQuestInfo)p);
                     break;
                 case (short)ServerPacketIds.NewRecipeInfo:
                     NewRecipeInfo((S.NewRecipeInfo)p);
+                    break;
+                case (short)ServerPacketIds.NewHeroInfo:
+                    NewHeroInfo((S.NewHeroInfo)p);
                     break;
             }
         }
@@ -199,6 +197,29 @@ namespace Client.MirControls
         private void NewItemInfo(S.NewItemInfo info)
         {
             GameScene.ItemInfoList.Add(info.Info);
+        }
+
+        private void NewHeroInfo(S.NewHeroInfo info)
+        {
+            AddHeroInformation(info.Info, info.StorageIndex);
+        }
+
+        public void AddHeroInformation(ClientHeroInformation info, int storageIndex = -1)
+        {
+            if (info == null) return;
+            GameScene.HeroInfoList.RemoveAll(x => x.Index == info.Index);
+            GameScene.HeroInfoList.Add(info);
+
+            if (storageIndex < 0) return;
+            GameScene.HeroStorage[storageIndex] = info;
+        }
+
+        private void NewChatItem(S.NewChatItem p)
+        {
+            if (GameScene.ChatItemList.Any(x => x.UniqueID == p.Item.UniqueID)) return;
+
+            GameScene.Bind(p.Item);
+            GameScene.ChatItemList.Add(p.Item);
         }
 
         private void NewQuestInfo(S.NewQuestInfo info)
@@ -211,6 +232,9 @@ namespace Client.MirControls
             GameScene.RecipeInfoList.Add(info.Info);
 
             GameScene.Bind(info.Info.Item);
+
+            for (int j = 0; j < info.Info.Tools.Count; j++)
+                GameScene.Bind(info.Info.Tools[j]);
 
             for (int j = 0; j < info.Info.Ingredients.Count; j++)
                 GameScene.Bind(info.Info.Ingredients[j]);

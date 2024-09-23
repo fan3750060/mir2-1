@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using Client.MirGraphics;
+﻿using Client.MirGraphics;
 using Client.MirScenes;
 using S = ServerPackets;
 using System.Text.RegularExpressions;
 
 namespace Client.MirObjects
 {
-    class ItemObject : MapObject
+    public class ItemObject : MapObject
     {
         public override ObjectType Race{
             get { return ObjectType.Item; }
@@ -135,6 +130,7 @@ namespace Client.MirObjects
                 NameLabel = LabelList[i];
                 break;
             }
+
             if (NameLabel != null && !NameLabel.IsDisposed) return;
 
             NameLabel = new MirControls.MirLabel

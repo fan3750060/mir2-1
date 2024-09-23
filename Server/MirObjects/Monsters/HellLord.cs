@@ -1,7 +1,7 @@
+using System.Drawing;
 ﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
-using System.Drawing;
 
 namespace Server.MirObjects.Monsters
 {
@@ -53,7 +53,7 @@ namespace Server.MirObjects.Monsters
 
             return 0;
         }
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             if (_stage >= 4)
             {
@@ -110,10 +110,7 @@ namespace Server.MirObjects.Monsters
             AttackTime = Envir.Time + AttackSpeed;
         }
 
-        protected override void Attack()
-        {
-           
-        }
+        protected override void Attack() { }
 
         private void SpawnQuakes()
         {
@@ -136,43 +133,21 @@ namespace Server.MirObjects.Monsters
 
                     if (!CurrentMap.ValidPoint(location)) continue;
 
-                    SpellObject spellObj = null;
+                    var start = Envir.Random.Next(5000);
 
-                    switch (Envir.Random.Next(2))
+                    var spellObj = new SpellObject
                     {
-                        case 0:
-                            {
-                                spellObj = new SpellObject
-                                {
-                                    Spell = Spell.MapQuake1,
-                                    Value = Envir.Random.Next(Envir.Random.Next(MinDC, MaxDC)),
-                                    ExpireTime = Envir.Time + (2000),
-                                    TickSpeed = 500,
-                                    Caster = null,
-                                    CurrentLocation = location,
-                                    CurrentMap = CurrentMap,
-                                    Direction = MirDirection.Up
-                                };
-                            }
-                            break;
-                        case 1:
-                            {
-                                spellObj = new SpellObject
-                                {
-                                    Spell = Spell.MapQuake2,
-                                    Value = Envir.Random.Next(Envir.Random.Next(MinDC, MaxDC)),
-                                    ExpireTime = Envir.Time + (2000),
-                                    TickSpeed = 500,
-                                    Caster = null,
-                                    CurrentLocation = location,
-                                    CurrentMap = CurrentMap,
-                                    Direction = MirDirection.Up
-                                };
-                            }
-                            break;
-                    }
+                        Spell = Envir.Random.Next(2) == 0 ? Spell.MapQuake1 : Spell.MapQuake2,
+                        Value = Envir.Random.Next(Envir.Random.Next(Stats[Stat.MinDC], Stats[Stat.MaxDC])),
+                        ExpireTime = Envir.Time + 2000 + start,
+                        TickSpeed = 500,
+                        Caster = null,
+                        CurrentLocation = location,
+                        CurrentMap = CurrentMap,
+                        Direction = MirDirection.Up
+                    };
 
-                    DelayedAction action = new DelayedAction(DelayedType.Spawn, Envir.Time + Envir.Random.Next(5000), spellObj);
+                    DelayedAction action = new DelayedAction(DelayedType.Spawn, Envir.Time + start, spellObj);
                     CurrentMap.ActionList.Add(action);
                 }
             }
@@ -280,6 +255,7 @@ namespace Server.MirObjects.Monsters
                 Poison = CurrentPoison,
                 Hidden = Hidden,
                 ExtraByte = _stage,
+                Buffs = Buffs.Where(d => d.Info.Visible).Select(e => e.Type).ToList()
             };
         }
     }

@@ -1,6 +1,5 @@
-﻿using System;
 using System.Drawing;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
@@ -33,26 +32,37 @@ namespace Server.MirObjects.Monsters
 
             if (Envir.Random.Next(5) == 0)
             {
-                TeleportRandom(40, AttackRange);
+                TeleportRandom(10, AttackRange);
             }
             else
             {
-                Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
-                Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
+                var hpPercent = (HP * 100) / Stats[Stat.HP];
 
-                ActionTime = Envir.Time + 300;
-                AttackTime = Envir.Time + AttackSpeed;
+                if (Envir.Random.Next(3) == 0 && hpPercent < 50)
+                {
+                    Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, Type = 0 });
 
-                int damage = GetAttackPower(MinMC, MaxMC);
-                if (damage == 0) return;
+                    ActionTime = Envir.Time + 300;
+                    AttackTime = Envir.Time + AttackSpeed;
 
-                int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
+                    ChangeHP(Stats[Stat.HP] / 4);
+                }
+                else
+                {
+                    Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
+                    Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
 
-                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, Target, damage, DefenceType.MACAgility);
-                ActionList.Add(action);
+                    ActionTime = Envir.Time + 300;
+                    AttackTime = Envir.Time + AttackSpeed;
 
-                if (Target.Dead)
-                    FindTarget();
+                    int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
+                    if (damage == 0) return;
+
+                    int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
+
+                    DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.MACAgility);
+                    ActionList.Add(action);
+                }
             }
         }
 

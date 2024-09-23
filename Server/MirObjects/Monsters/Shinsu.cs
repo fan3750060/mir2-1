@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using Server.MirDatabase;
+﻿using Server.MirDatabase;
 using Server.MirEnvir;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
 {
-    class Shinsu : MonsterObject
+    public class Shinsu : MonsterObject
     {
         public bool Mode = false;
         public bool Summoned;
@@ -27,7 +22,6 @@ namespace Server.MirObjects.Monsters
         {
             ActionTime = Envir.Time + 1000;
         }
-
 
         protected override void ProcessAI()
         {
@@ -65,60 +59,26 @@ namespace Server.MirObjects.Monsters
 
             return (x <= 1 && y <= 1) || (x == y || x % 2 == y % 2);
         }
+
         protected override void Attack()
         {
-
             if (!Target.IsAttackTarget(this))
             {
                 Target = null;
                 return;
             }
 
-            Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
-            Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
-            ActionList.Add(new DelayedAction(DelayedType.Damage, Envir.Time + 500));
-
             ActionTime = Envir.Time + 300;
             AttackTime = Envir.Time + AttackSpeed;
             ShockTime = 0;
 
-            if (Target.Dead)
-                FindTarget();
-        }
+            Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
+            Broadcast(new S.ObjectAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
 
-        private void LineAttack(int distance)
-        {
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
             if (damage == 0) return;
 
-            for (int i = 1; i <= distance; i++)
-            {
-                Point target = Functions.PointMove(CurrentLocation, Direction, i);
-
-                if (Target != null && target == Target.CurrentLocation)
-                    Target.Attacked(this, damage, DefenceType.MACAgility);
-                else
-                {
-                    if (!CurrentMap.ValidPoint(target)) continue;
-
-                    Cell cell = CurrentMap.GetCell(target);
-                    if (cell.Objects == null) continue;
-
-                    for (int o = 0; o < cell.Objects.Count; o++)
-                    {
-                        MapObject ob = cell.Objects[o];
-                        if (ob.Race == ObjectType.Monster || ob.Race == ObjectType.Player)
-                        {
-                            if (!ob.IsAttackTarget(this)) continue;
-
-                            ob.Attacked(this, damage, DefenceType.MACAgility);
-                        }
-                        else continue;
-
-                        break;
-                    }
-                }
-            }
+            LineAttack(damage, 2);
         }
 
         public override void Spawned()
@@ -128,30 +88,26 @@ namespace Server.MirObjects.Monsters
             Summoned = true;
         }
 
-        protected override void CompleteAttack(IList<object> data)
-        {
-            LineAttack(2);
-        }
-
         public override Packet GetInfo()
         {
             return new S.ObjectMonster
-                {
-                    ObjectID = ObjectID,
-                    Name = Name,
-                    NameColour = NameColour,
-                    Location = CurrentLocation,
-                    Image = Mode ? Monster.Shinsu1 : Monster.Shinsu,
-                    Direction = Direction,
-                    Effect = Info.Effect,
-                    AI = Info.AI,
-                    Light = Info.Light,
-                    Dead = Dead,
-                    Skeleton = Harvested,
-                    Poison = CurrentPoison,
-                    Hidden = Hidden,
-                    Extra = Summoned,
-                };
+            {
+                ObjectID = ObjectID,
+                Name = Name,
+                NameColour = NameColour,
+                Location = CurrentLocation,
+                Image = Mode ? Monster.Shinsu1 : Monster.Shinsu,
+                Direction = Direction,
+                Effect = Info.Effect,
+                AI = Info.AI,
+                Light = Info.Light,
+                Dead = Dead,
+                Skeleton = Harvested,
+                Poison = CurrentPoison,
+                Hidden = Hidden,
+                Extra = Summoned,
+                Buffs = Buffs.Where(d => d.Info.Visible).Select(e => e.Type).ToList()
+            };
         }
     }
 }

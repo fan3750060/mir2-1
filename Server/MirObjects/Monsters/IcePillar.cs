@@ -1,5 +1,4 @@
 ﻿using Server.MirDatabase;
-using System.Collections.Generic;
 using S = ServerPackets;
 
 namespace Server.MirObjects.Monsters
@@ -36,21 +35,21 @@ namespace Server.MirObjects.Monsters
             switch (type)
             {
                 case DefenceType.ACAgility:
-                    if (Envir.Random.Next(Agility + 1) > attacker.Accuracy) return 0;
-                    armour = GetDefencePower(MinAC, MaxAC);
+                    if (Envir.Random.Next(Stats[Stat.Agility] + 1) > attacker.Stats[Stat.Accuracy]) return 0;
+                    armour = GetAttackPower(Stats[Stat.MinAC], Stats[Stat.MaxAC]);
                     break;
                 case DefenceType.AC:
-                    armour = GetDefencePower(MinAC, MaxAC);
+                    armour = GetAttackPower(Stats[Stat.MinAC], Stats[Stat.MaxAC]);
                     break;
                 case DefenceType.MACAgility:
-                    if (Envir.Random.Next(Agility + 1) > attacker.Accuracy) return 0;
-                    armour = GetDefencePower(MinMAC, MaxMAC);
+                    if (Envir.Random.Next(Stats[Stat.Agility] + 1) > attacker.Stats[Stat.Accuracy]) return 0;
+                    armour = GetAttackPower(Stats[Stat.MinMAC], Stats[Stat.MaxMAC]);
                     break;
                 case DefenceType.MAC:
-                    armour = GetDefencePower(MinMAC, MaxMAC);
+                    armour = GetAttackPower(Stats[Stat.MinMAC], Stats[Stat.MaxMAC]);
                     break;
                 case DefenceType.Agility:
-                    if (Envir.Random.Next(Agility + 1) > attacker.Accuracy) return 0;
+                    if (Envir.Random.Next(Stats[Stat.Agility] + 1) > attacker.Stats[Stat.Accuracy]) return 0;
                     break;
             }
 
@@ -63,7 +62,11 @@ namespace Server.MirObjects.Monsters
             else if (attacker.Master != null)
             {
                 if (EXPOwner == null || EXPOwner.Dead)
-                    EXPOwner = attacker.Master;
+                    EXPOwner = attacker.Master switch
+                    {
+                        HeroObject hero => hero.Owner,
+                        _ => attacker.Master
+                    };
 
                 if (EXPOwner == attacker.Master)
                     EXPOwnerTime = Envir.Time + EXPOwnerDelay;
@@ -81,28 +84,28 @@ namespace Server.MirObjects.Monsters
         
         }
 
-        public override int Attacked(PlayerObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
+        public override int Attacked(HumanObject attacker, int damage, DefenceType type = DefenceType.ACAgility, bool damageWeapon = true)
         {
             int armour = 0;
 
             switch (type)
             {
                 case DefenceType.ACAgility:
-                    if (Envir.Random.Next(Agility + 1) > attacker.Accuracy) return 0;
-                    armour = GetDefencePower(MinAC, MaxAC);
+                    if (Envir.Random.Next(Stats[Stat.Agility] + 1) > attacker.Stats[Stat.Accuracy]) return 0;
+                    armour = GetAttackPower(Stats[Stat.MinAC], Stats[Stat.MaxAC]);
                     break;
                 case DefenceType.AC:
-                    armour = GetDefencePower(MinAC, MaxAC);
+                    armour = GetAttackPower(Stats[Stat.MinAC], Stats[Stat.MaxAC]);
                     break;
                 case DefenceType.MACAgility:
-                    if (Envir.Random.Next(Agility + 1) > attacker.Accuracy) return 0;
-                    armour = GetDefencePower(MinMAC, MaxMAC);
+                    if (Envir.Random.Next(Stats[Stat.Agility] + 1) > attacker.Stats[Stat.Accuracy]) return 0;
+                    armour = GetAttackPower(Stats[Stat.MinMAC], Stats[Stat.MaxMAC]);
                     break;
                 case DefenceType.MAC:
-                    armour = GetDefencePower(MinMAC, MaxMAC);
+                    armour = GetAttackPower(Stats[Stat.MinMAC], Stats[Stat.MaxMAC]);
                     break;
                 case DefenceType.Agility:
-                    if (Envir.Random.Next(Agility + 1) > attacker.Accuracy) return 0;
+                    if (Envir.Random.Next(Stats[Stat.Agility] + 1) > attacker.Stats[Stat.Accuracy]) return 0;
                     break;
             }
 
@@ -118,7 +121,7 @@ namespace Server.MirObjects.Monsters
                     attacker.BrownTime = Envir.Time + Settings.Minute;
 
             if (EXPOwner == null || EXPOwner.Dead)
-                EXPOwner = attacker;
+                EXPOwner = GetAttacker(attacker);
 
             if (EXPOwner == attacker)
                 EXPOwnerTime = Envir.Time + EXPOwnerDelay;
@@ -156,13 +159,7 @@ namespace Server.MirObjects.Monsters
 
                 if (targets[i].Attacked(this, damage, DefenceType.MACAgility) <= 0) continue;
 
-                if (Envir.Random.Next(Settings.PoisonResistWeight) >= targets[i].PoisonResist)
-                {
-                    if (Envir.Random.Next(5) == 0)
-                    {
-                        targets[i].ApplyPoison(new Poison { PType = PoisonType.Frozen, Duration = GetAttackPower(MinMC, MaxMC), TickSpeed = 1000 }, this);
-                    }
-                }
+                PoisonTarget(targets[i], 5, GetAttackPower(Stats[Stat.MinMC], Stats[Stat.MaxMC]), PoisonType.Frozen, 1000);
             }
         }
 
@@ -170,11 +167,9 @@ namespace Server.MirObjects.Monsters
         {
             Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation });
 
-            int damage = GetAttackPower(MinDC, MaxDC);
+            int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
 
             List<MapObject> targets = FindAllTargets(7, CurrentLocation, false);
-
-            if (targets.Count == 0) return;
 
             for (int i = 0; i < targets.Count; i++)
             {
@@ -197,8 +192,7 @@ namespace Server.MirObjects.Monsters
 
             target.Attacked(this, damage, defence);
 
-            if (Envir.Random.Next(5) == 0)
-                target.ApplyPoison(new Poison { Owner = this, Duration = 5, PType = PoisonType.Frozen, Value = GetAttackPower(MinMC, MaxMC), TickSpeed = 1000 }, this);
+            PoisonTarget(target, 5, 5, PoisonType.Frozen, 1000);
         }
     }
 }

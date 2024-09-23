@@ -28,7 +28,6 @@ namespace Server.MirObjects.Monsters
 
             ShockTime = 0;
 
-
             Direction = Functions.DirectionFromPoint(CurrentLocation, Target.CurrentLocation);
 
             ActionTime = Envir.Time + 300;
@@ -38,35 +37,34 @@ namespace Server.MirObjects.Monsters
             {
                 Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID });
 
-                int damage = GetAttackPower(MinDC, MaxDC);
+                int damage = GetAttackPower(Stats[Stat.MinDC], Stats[Stat.MaxDC]);
                 if (damage == 0) return;
 
                 int delay = Functions.MaxDistance(CurrentLocation, Target.CurrentLocation) * 50 + 500; //50 MS per Step
 
-                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + delay, Target, damage, DefenceType.MACAgility);
+                DelayedAction action = new DelayedAction(DelayedType.RangeDamage, Envir.Time + delay, Target, damage, DefenceType.MACAgility, false);
                 ActionList.Add(action);
             }
             else
             {
                 Broadcast(new S.ObjectRangeAttack { ObjectID = ObjectID, Direction = Direction, Location = CurrentLocation, TargetID = Target.ObjectID, Type = 1 });
 
-                if (Envir.Random.Next(Settings.PoisonResistWeight) >= Target.PoisonResist)
-                {
-                    int levelgap = 50 - Target.Level;
-                    if (Envir.Random.Next(20) < 4 + levelgap)
-                        Target.ApplyPoison(new Poison
-                        {
-                            Owner = this,
-                            Duration = 5,
-                            PType = PoisonType.Slow,
-                            TickSpeed = 1000,
-                        }, this);
-                }
+                DelayedAction action = new DelayedAction(DelayedType.Damage, Envir.Time + 300, Target);
+                ActionList.Add(action);
             }
+        }
 
-            if (Target.Dead)
-                FindTarget();
+        protected override void CompleteAttack(IList<object> data)
+        {
+            MapObject target = (MapObject)data[0];
 
+            if (target == null || !target.IsAttackTarget(this) || target.CurrentMap != CurrentMap || target.Node == null) return;
+
+            int levelgap = 50 - target.Level;
+
+            if (Envir.Random.Next(20) < 4 + levelgap) {
+                PoisonTarget(target, 1, 5, PoisonType.Slow, 1000);
+            }
         }
 
         protected override void ProcessTarget()
